@@ -2,7 +2,7 @@ Source: yosys
 Section: universe/electronics
 Priority: extra
 Maintainer: Ruben Undheim <ruben.undheim@gmail.com>
-Build-Depends: debhelper (>= 9), tcl8.5-dev, libqt4-dev, libqt4-opengl-dev, libqtwebkit-dev, libreadline-dev, git, zlib1g-dev, bison, flex, mercurial, iverilog, minisat
+Build-Depends: debhelper (>= 9), tcl8.5-dev, libqt4-dev, libqt4-opengl-dev, libqtwebkit-dev, libreadline-dev, git, zlib1g-dev, bison, flex, iverilog, minisat
 Standards-Version: 3.9.2
 Homepage: http://www.clifford.at/yosys
 #Vcs-Git: https://github.com/cliffordwolf/yosys.git
@@ -10,5 +10,6 @@ Homepage: http://www.clifford.at/yosys
 Package: yosys
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}, iverilog, graphviz
+Recommends: yosys-abc
 Description: Open source synthesis of digital circuits
  yosys is a complete package for the synthesis from RTL to gate-level logic.
