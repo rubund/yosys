@@ -11,3 +11,8 @@
 
 %:
 	dh $@ 
+
+
+override_dh_auto_configure:
+	make config-release
+
