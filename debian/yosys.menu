@@ -1,0 +1,2 @@
+?package(yosys):needs="text" section="Applications/Amateur Radio"\
+  title="yosys" command="/usr/bin/yosys"
