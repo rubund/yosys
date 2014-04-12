@@ -1,4 +1,4 @@
-yosys (2.0.0+-1~precise) precise; urgency=low
+yosys (0.2.0+-1~precise) precise; urgency=low
 
   * First ubuntu package of yosys 
 
