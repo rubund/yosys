@@ -1,0 +1,13 @@
+Index: yosys-0.2.0+/Makefile
+===================================================================
+--- yosys-0.2.0+.orig/Makefile	2014-04-12 21:45:48.687931939 +0200
++++ yosys-0.2.0+/Makefile	2014-04-12 22:23:18.635951058 +0200
+@@ -12,7 +12,7 @@
+ # other configuration flags
+ ENABLE_GPROF := 0
+ 
+-DESTDIR := /usr/local
++DESTDIR := /usr
+ INSTALL_SUDO :=
+ 
+ OBJS =

@@ -1,0 +1,39 @@
+Index: yosys-0.2.0+/tests/techmap/mem_simple_4x1_runtest.sh
+===================================================================
+--- yosys-0.2.0+.orig/tests/techmap/mem_simple_4x1_runtest.sh	2014-04-12 19:30:08.803862768 +0200
++++ yosys-0.2.0+/tests/techmap/mem_simple_4x1_runtest.sh	2014-04-13 00:29:23.212015340 +0200
+@@ -2,7 +2,7 @@
+ 
+ set -ev
+ 
+-../../yosys -b 'verilog -noattr' -o mem_simple_4x1_synth.v -p 'proc; opt; memory -nomap; techmap -map mem_simple_4x1_map.v;; techmap; opt; abc;; stat' mem_simple_4x1_uut.v
++../../yosys -b 'verilog -noattr' -o mem_simple_4x1_synth.v -p 'proc; opt; memory -nomap; techmap -map mem_simple_4x1_map.v;; techmap; opt;; stat' mem_simple_4x1_uut.v
+ 
+ iverilog -o mem_simple_4x1_gold_tb mem_simple_4x1_tb.v mem_simple_4x1_uut.v
+ iverilog -o mem_simple_4x1_gate_tb mem_simple_4x1_tb.v mem_simple_4x1_synth.v mem_simple_4x1_cells.v
+Index: yosys-0.2.0+/tests/tools/autotest.sh
+===================================================================
+--- yosys-0.2.0+.orig/tests/tools/autotest.sh	2014-04-13 00:02:10.756001468 +0200
++++ yosys-0.2.0+/tests/tools/autotest.sh	2014-04-13 00:29:59.112015646 +0200
+@@ -126,7 +126,7 @@
+ 			test_passes -p "verific -vlog2k $fn; verific -import -gates -all; opt; memory;;"
+ 		else
+ 			test_passes -f "$frontend" -p "hierarchy; proc; opt; memory; opt; fsm; opt" $fn
+-			test_passes -f "$frontend" -p "hierarchy; proc; opt; memory; opt; fsm; opt; techmap; opt; abc -dff; opt" $fn
++			test_passes -f "$frontend" -p "hierarchy; proc; opt; memory; opt; fsm; opt; techmap; opt; " $fn
+ 		fi
+ 		touch ../${bn}.log
+ 	}
+Index: yosys-0.2.0+/Makefile
+===================================================================
+--- yosys-0.2.0+.orig/Makefile	2014-04-13 00:18:29.640009786 +0200
++++ yosys-0.2.0+/Makefile	2014-04-13 00:30:39.800015992 +0200
+@@ -6,7 +6,7 @@
+ # features (the more the better)
+ ENABLE_TCL := 1
+ ENABLE_QT4 := 1
+-ENABLE_ABC := 1
++ENABLE_ABC := 0
+ ENABLE_VERIFIC := 0
+ 
+ # other configuration flags

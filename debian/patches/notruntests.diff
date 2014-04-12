@@ -1,0 +1,32 @@
+Index: yosys-0.2.0+/Makefile
+===================================================================
+--- yosys-0.2.0+.orig/Makefile	2014-04-13 00:02:10.768001468 +0200
++++ yosys-0.2.0+/Makefile	2014-04-13 00:18:25.476009751 +0200
+@@ -157,12 +157,12 @@
+ yosys-abc: abc/abc-$(ABCREV)
+ 	cp abc/abc-$(ABCREV) yosys-abc
+ 
+-test: $(TARGETS) $(EXTRA_TARGETS)
+-	cd tests/simple && bash run-test.sh
+-	cd tests/hana && bash run-test.sh
+-	cd tests/asicworld && bash run-test.sh
+-	cd tests/techmap && bash run-test.sh
+-	cd tests/sat && bash run-test.sh
++#test: $(TARGETS) $(EXTRA_TARGETS)
++#	cd tests/simple && bash run-test.sh
++#	cd tests/hana && bash run-test.sh
++#	cd tests/asicworld && bash run-test.sh
++#	cd tests/techmap && bash run-test.sh
++#	cd tests/sat && bash run-test.sh
+ 
+ install: $(TARGETS) $(EXTRA_TARGETS)
+ 	$(INSTALL_SUDO) mkdir -p $(DESTDIR)/bin
+@@ -219,6 +219,7 @@
+ -include kernel/*.d
+ -include techlibs/*/*.d
+ 
+-.PHONY: all top-all abc test install install-abc manual clean mrproper qtcreator
++#.PHONY: all top-all abc test install install-abc manual clean mrproper qtcreator
++.PHONY: all top-all abc install install-abc manual clean mrproper qtcreator
+ .PHONY: config-clean config-clang-debug config-gcc-debug config-release
+ 
