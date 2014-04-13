@@ -1,0 +1,10 @@
+yosys usr/bin
+yosys-filterlib usr/bin
+yosys-svgviewer usr/bin
+yosys-config usr/bin
+share/simcells.v usr/share/yosys/simcells.v
+share/xilinx/cells.v usr/share/yosys/xilinx/cells.v
+share/simlib.v usr/share/yosys/simlib.v
+share/pmux2mux.v usr/share/yosys/pmux2mux.v
+share/blackbox.v usr/share/yosys/blackbox.v
+
