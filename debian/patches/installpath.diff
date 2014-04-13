@@ -1,13 +1,21 @@
 Index: yosys-0.2.0+/Makefile
 ===================================================================
---- yosys-0.2.0+.orig/Makefile	2014-04-12 21:45:48.687931939 +0200
-+++ yosys-0.2.0+/Makefile	2014-04-12 22:23:18.635951058 +0200
-@@ -12,7 +12,7 @@
- # other configuration flags
- ENABLE_GPROF := 0
+--- yosys-0.2.0+.orig/Makefile	2014-04-13 12:11:25.416694559 +0200
++++ yosys-0.2.0+/Makefile	2014-04-13 12:12:00.200694857 +0200
+@@ -164,11 +164,11 @@
+ #	cd tests/techmap && bash run-test.sh
+ #	cd tests/sat && bash run-test.sh
  
--DESTDIR := /usr/local
-+DESTDIR := /usr
- INSTALL_SUDO :=
+-install: $(TARGETS) $(EXTRA_TARGETS)
+-	$(INSTALL_SUDO) mkdir -p $(DESTDIR)/bin
+-	$(INSTALL_SUDO) install $(TARGETS) $(DESTDIR)/bin/
+-	$(INSTALL_SUDO) mkdir -p $(DESTDIR)/share/yosys
+-	$(INSTALL_SUDO) cp -r share/. $(DESTDIR)/share/yosys/.
++#install: $(TARGETS) $(EXTRA_TARGETS)
++#	$(INSTALL_SUDO) mkdir -p $(DESTDIR)/bin
++#	$(INSTALL_SUDO) install $(TARGETS) $(DESTDIR)/bin/
++#	$(INSTALL_SUDO) mkdir -p $(DESTDIR)/share/yosys
++#	$(INSTALL_SUDO) cp -r share/. $(DESTDIR)/share/yosys/.
  
- OBJS =
+ manual: $(TARGETS) $(EXTRA_TARGETS)
+ 	cd manual && bash appnotes.sh
