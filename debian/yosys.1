@@ -16,44 +16,68 @@
 .\" .sp <n>    insert n+1 empty lines
 .\" for manpage-specific macros, see man(7)
 .SH NAME
-yosys \- program to do something
+yosys \- Yosys Open SYnthesis Suite 
 .SH SYNOPSIS
 .B yosys
-.RI [ options ] " files" ...
-.br
-.B bar
-.RI [ options ] " files" ...
+.RI [-V]\ [-S]\ [-q]\ [-v\ <level>\ [-t]\ [-l\ <logfile>]\ [-o\ <outfile>]\ [-f\ <frontend>]\ [-h\ cmd]\ [{-s|-c}\ <scriptfile>]\ [-p\ <pass>\ [-p\ ..]]\ [-b\ <backend>]\ [-m\ <module\_file>]\ [<infile>\ [..]] 
 .SH DESCRIPTION
 This manual page documents briefly the
 .B yosys
-and
-.B bar
-commands.
+command.
 .PP
 .\" TeX users may be more comfortable with the \fB<whatever>\fP and
 .\" \fI<whatever>\fP escape sequences to invode bold face and italics,
 .\" respectively.
-\fByosys\fP is a program that...
+\fByosys\fP is a program that synthesizes RTL to gate-level logic.
 .SH OPTIONS
-These programs follow the usual GNU command line syntax, with long
-options starting with two dashes (`-').
 A summary of options is included below.
-For a complete description, see the Info files.
 .TP
-.B \-h, \-\-help
-Show summary of options.
+.B \-q
+quiet operation. only write error message to console
 .TP
-.B \-v, \-\-version
-Show version of program.
-.SH SEE ALSO
-.BR bar (1),
-.BR baz (1).
-.br
-The programs are documented fully by
-.IR "The Rise and Fall of a Fooish Bar" ,
-available via the Info system.
+.B \-v <level>
+print log headers up to level <level> to the console. (implies -q)
+.TP
+.B \-t
+annotate all log messages with a time stamp
+.TP
+.B \-l logfile
+write log messages to the specified file
+.TP
+.B \-o outfile
+write the design to the specified file on exit
+.TP
+.B \-b backend
+use this backend for the output file specified on the command line
+.TP
+.B \-H
+print the command list
+.TP
+.B \-h command
+print the help message for the specified command
+.TP
+.B \-s scriptfile
+execute the commands in the script file
+.TP
+.B \-c tcl_scriptfile
+execute the commands in the tcl script file (see 'help tcl' for details)
+.TP
+.B \-p command
+execute the commands
+.TP
+.B \-m module_file
+load the specified module (aka plugin)
+.TP
+.B \-V
+print version information and exit
+.TP
+.B \-S
+The option -S is an alias for the following options that perform a simple
+transformation of the input to a gate-level netlist.
+
+    -p hierarchy -p proc -p opt -p memory -p opt -p techmap -p opt
 .SH AUTHOR
-yosys was written by <upstream author>.
+yosys was written by Clifford Wolf <clifford@clifford.at>.
 .PP
-This manual page was written by Ruben <ruben@unknown>,
+This manual page was written by Ruben Undheim <ruben.undheim@gmail.com>,
 for the Debian project (and may be used by others).
