@@ -306,7 +306,8 @@ void Frontend::frontend_call(RTLIL::Design *design, FILE *f, std::string filenam
 	if (f != NULL) {
 		frontend_register[args[0]]->execute(f, filename, args, design);
 	} else if (filename == "-") {
-		frontend_register[args[0]]->execute(stdin, "<stdin>", args, design);
+		FILE *f_stdin = stdin; // workaround for OpenBSD 'stdin' implementation
+		frontend_register[args[0]]->execute(f_stdin, "<stdin>", args, design);
 	} else {
 		if (!filename.empty())
 			args.push_back(filename);
@@ -399,7 +400,8 @@ void Backend::backend_call(RTLIL::Design *design, FILE *f, std::string filename,
 	if (f != NULL) {
 		backend_register[args[0]]->execute(f, filename, args, design);
 	} else if (filename == "-") {
-		backend_register[args[0]]->execute(stdout, "<stdout>", args, design);
+		FILE *f_stdout = stdout; // workaround for OpenBSD 'stdout' implementation
+		backend_register[args[0]]->execute(f_stdout, "<stdout>", args, design);
 	} else {
 		if (!filename.empty())
 			args.push_back(filename);
