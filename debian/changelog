@@ -1,3 +1,15 @@
+yosys (0.2.0+-git1-68c0595-2~trusty) trusty; urgency=low
+
+  * Fixed revision number shown 
+
+ -- Ruben Undheim <ruben.undheim@gmail.com>  Fri, 17 May 2014 00:49:29 +0200
+
+yosys (0.2.0+-git1-68c0595-1~trusty) trusty; urgency=low
+
+  * New snapshot from git 
+
+ -- Ruben Undheim <ruben.undheim@gmail.com>  Fri, 17 May 2014 00:24:31 +0200
+
 yosys (0.2.0+-7gitd18c10d~precise) precise; urgency=low
 
   * First ubuntu package of yosys 
