@@ -137,11 +137,22 @@ static void generate(RTLIL::Design *design, const std::vector<std::string> &cell
 static bool expand_module(RTLIL::Design *design, RTLIL::Module *module, bool flag_check, std::vector<std::string> &libdirs)
 {
 	bool did_something = false;
+	std::map<RTLIL::Cell*, std::pair<int, int>> array_cells;
 	std::string filename;
 
 	for (auto &cell_it : module->cells)
 	{
 		RTLIL::Cell *cell = cell_it.second;
+
+		if (cell->type.substr(0, 7) == "$array:") {
+			int pos_idx = cell->type.find_first_of(':');
+			int pos_num = cell->type.find_first_of(':', pos_idx + 1);
+			int pos_type = cell->type.find_first_of(':', pos_num + 1);
+			int idx = atoi(cell->type.substr(pos_idx + 1, pos_num).c_str());
+			int num = atoi(cell->type.substr(pos_num + 1, pos_type).c_str());
+			array_cells[cell] = std::pair<int, int>(idx, num);
+			cell->type = cell->type.substr(pos_type + 1);
+		}
 
 		if (design->modules.count(cell->type) == 0)
 		{
@@ -196,6 +207,38 @@ static bool expand_module(RTLIL::Design *design, RTLIL::Module *module, bool fla
 		cell->type = mod->derive(design, cell->parameters);
 		cell->parameters.clear();
 		did_something = true;
+	}
+
+	for (auto &it : array_cells)
+	{
+		RTLIL::Cell *cell = it.first;
+		int idx = it.second.first, num = it.second.second;
+
+		if (design->modules.count(cell->type) == 0)
+			log_error("Array cell `%s.%s' of unkown type `%s'.\n", RTLIL::id2cstr(module->name), RTLIL::id2cstr(cell->name), RTLIL::id2cstr(cell->type));
+
+		RTLIL::Module *mod = design->modules[cell->type];
+
+		for (auto &conn : cell->connections) {
+			int conn_size = conn.second.width;
+			std::string portname = conn.first;
+			if (portname.substr(0, 1) == "$") {
+				int port_id = atoi(portname.substr(1).c_str());
+				for (auto &wire_it : mod->wires)
+					if (wire_it.second->port_id == port_id) {
+						portname = wire_it.first;
+						break;
+					}
+			}
+			if (mod->wires.count(portname) == 0)
+				log_error("Array cell `%s.%s' connects to unkown port `%s'.\n", RTLIL::id2cstr(module->name), RTLIL::id2cstr(cell->name), RTLIL::id2cstr(conn.first));
+			int port_size = mod->wires.at(portname)->width;
+			if (conn_size == port_size)
+				continue;
+			if (conn_size != port_size*num)
+				log_error("Array cell `%s.%s' has invalid port vs. signal size for port `%s'.\n", RTLIL::id2cstr(module->name), RTLIL::id2cstr(cell->name), RTLIL::id2cstr(conn.first));
+			conn.second = conn.second.extract(port_size*idx, port_size);
+		}
 	}
 
 	return did_something;

@@ -107,6 +107,7 @@ namespace AST
 		AST_ASSIGN,
 		AST_CELL,
 		AST_PRIMITIVE,
+		AST_CELLARRAY,
 		AST_ALWAYS,
 		AST_INITIAL,
 		AST_BLOCK,
@@ -117,6 +118,7 @@ namespace AST
 		AST_DEFAULT,
 		AST_FOR,
 		AST_WHILE,
+		AST_REPEAT,
 
 		AST_GENVAR,
 		AST_GENFOR,
@@ -201,6 +203,7 @@ namespace AST
 
 		// additional functionality for evaluating constant functions
 		struct varinfo_t { RTLIL::Const val; int offset; bool is_signed; };
+		bool has_const_only_constructs(bool &recommend_const_eval);
 		void replace_variables(std::map<std::string, varinfo_t> &variables, AstNode *fcall);
 		AstNode *eval_const_function(AstNode *fcall);
 

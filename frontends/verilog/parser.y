@@ -98,7 +98,7 @@ static void free_attr(std::map<std::string, AstNode*> *al)
 %token TOK_MODULE TOK_ENDMODULE TOK_PARAMETER TOK_LOCALPARAM TOK_DEFPARAM
 %token TOK_INPUT TOK_OUTPUT TOK_INOUT TOK_WIRE TOK_REG
 %token TOK_INTEGER TOK_SIGNED TOK_ASSIGN TOK_ALWAYS TOK_INITIAL
-%token TOK_BEGIN TOK_END TOK_IF TOK_ELSE TOK_FOR
+%token TOK_BEGIN TOK_END TOK_IF TOK_ELSE TOK_FOR TOK_WHILE TOK_REPEAT
 %token TOK_POSEDGE TOK_NEGEDGE TOK_OR
 %token TOK_CASE TOK_CASEX TOK_CASEZ TOK_ENDCASE TOK_DEFAULT
 %token TOK_FUNCTION TOK_ENDFUNCTION TOK_TASK TOK_ENDTASK
@@ -373,6 +373,8 @@ range_or_integer:
 
 module_body:
 	module_body module_body_stmt |
+	/* the following line makes the generate..endgenrate keywords optional */
+	module_body gen_stmt |
 	/* empty */;
 
 module_body_stmt:
@@ -632,6 +634,13 @@ single_cell:
 			astbuf2->str = *$1;
 		delete $1;
 		ast_stack.back()->children.push_back(astbuf2);
+	} '(' cell_port_list ')' |
+	TOK_ID non_opt_range {
+		astbuf2 = astbuf1->clone();
+		if (astbuf2->type != AST_PRIMITIVE)
+			astbuf2->str = *$1;
+		delete $1;
+		ast_stack.back()->children.push_back(new AstNode(AST_CELLARRAY, $2, astbuf2));
 	} '(' cell_port_list ')';
 
 prim_list:
@@ -819,6 +828,32 @@ behavioral_stmt:
 		ast_stack.pop_back();
 		ast_stack.pop_back();
 	} |
+	attr TOK_WHILE '(' expr ')' {
+		AstNode *node = new AstNode(AST_WHILE);
+		ast_stack.back()->children.push_back(node);
+		ast_stack.push_back(node);
+		append_attr(node, $1);
+		AstNode *block = new AstNode(AST_BLOCK);
+		ast_stack.back()->children.push_back($4);
+		ast_stack.back()->children.push_back(block);
+		ast_stack.push_back(block);
+	} behavioral_stmt {
+		ast_stack.pop_back();
+		ast_stack.pop_back();
+	} |
+	attr TOK_REPEAT '(' expr ')' {
+		AstNode *node = new AstNode(AST_REPEAT);
+		ast_stack.back()->children.push_back(node);
+		ast_stack.push_back(node);
+		append_attr(node, $1);
+		AstNode *block = new AstNode(AST_BLOCK);
+		ast_stack.back()->children.push_back($4);
+		ast_stack.back()->children.push_back(block);
+		ast_stack.push_back(block);
+	} behavioral_stmt {
+		ast_stack.pop_back();
+		ast_stack.pop_back();
+	} |
 	attr TOK_IF '(' expr ')' {
 		AstNode *node = new AstNode(AST_CASE);
 		AstNode *block = new AstNode(AST_BLOCK);
@@ -987,8 +1022,11 @@ single_arg:
 	};
 
 module_gen_body:
-	module_gen_body gen_stmt |
+	module_gen_body gen_stmt_or_module_body_stmt |
 	/* empty */;
+
+gen_stmt_or_module_body_stmt:
+	gen_stmt | module_body_stmt;
 
 // this production creates the obligatory if-else shift/reduce conflict
 gen_stmt:
@@ -1028,15 +1066,14 @@ gen_stmt:
 		if ($6 != NULL)
 			delete $6;
 		ast_stack.pop_back();
-	} |
-	module_body_stmt;
+	};
 
 gen_stmt_block:
 	{
 		AstNode *node = new AstNode(AST_GENBLOCK);
 		ast_stack.back()->children.push_back(node);
 		ast_stack.push_back(node);
-	} gen_stmt {
+	} gen_stmt_or_module_body_stmt {
 		ast_stack.pop_back();
 	};
 
