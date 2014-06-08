@@ -1,7 +1,7 @@
 #!/bin/bash
 
 PACKAGENAME=yosys
-VERSION=0.2.0+-git2-94e9ee6
+VERSION=0.3.0+-git1-9a6cd64
 rm -rf createdeb/
 mkdir createdeb
 #rm -rf createdeb/$PACKAGENAME-$VERSION
