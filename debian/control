@@ -10,6 +10,6 @@ Homepage: http://www.clifford.at/yosys
 Package: yosys
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}, iverilog, graphviz
-Recommends: yosys-abc
+Recommends: abc
 Description: Open source synthesis of digital circuits
  yosys is a complete package for the synthesis from RTL to gate-level logic.
