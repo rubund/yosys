@@ -1,35 +1,9 @@
-Index: yosys-0.2.0+/tests/techmap/mem_simple_4x1_runtest.sh
+Index: yosys/Makefile
 ===================================================================
---- yosys-0.2.0+.orig/tests/techmap/mem_simple_4x1_runtest.sh	2014-04-12 19:30:08.803862768 +0200
-+++ yosys-0.2.0+/tests/techmap/mem_simple_4x1_runtest.sh	2014-04-13 00:29:23.212015340 +0200
-@@ -2,7 +2,7 @@
- 
- set -ev
- 
--../../yosys -b 'verilog -noattr' -o mem_simple_4x1_synth.v -p 'proc; opt; memory -nomap; techmap -map mem_simple_4x1_map.v;; techmap; opt; abc;; stat' mem_simple_4x1_uut.v
-+../../yosys -b 'verilog -noattr' -o mem_simple_4x1_synth.v -p 'proc; opt; memory -nomap; techmap -map mem_simple_4x1_map.v;; techmap; opt;; stat' mem_simple_4x1_uut.v
- 
- iverilog -o mem_simple_4x1_gold_tb mem_simple_4x1_tb.v mem_simple_4x1_uut.v
- iverilog -o mem_simple_4x1_gate_tb mem_simple_4x1_tb.v mem_simple_4x1_synth.v mem_simple_4x1_cells.v
-Index: yosys-0.2.0+/tests/tools/autotest.sh
-===================================================================
---- yosys-0.2.0+.orig/tests/tools/autotest.sh	2014-04-13 00:02:10.756001468 +0200
-+++ yosys-0.2.0+/tests/tools/autotest.sh	2014-04-13 00:29:59.112015646 +0200
-@@ -126,7 +126,7 @@
- 			test_passes -p "verific -vlog2k $fn; verific -import -gates -all; opt; memory;;"
- 		else
- 			test_passes -f "$frontend" -p "hierarchy; proc; opt; memory; opt; fsm; opt" $fn
--			test_passes -f "$frontend" -p "hierarchy; proc; opt; memory; opt; fsm; opt; techmap; opt; abc -dff; opt" $fn
-+			test_passes -f "$frontend" -p "hierarchy; proc; opt; memory; opt; fsm; opt; techmap; opt; " $fn
- 		fi
- 		touch ../${bn}.log
- 	}
-Index: yosys-0.2.0+/Makefile
-===================================================================
---- yosys-0.2.0+.orig/Makefile	2014-04-13 02:59:27.656091856 +0200
-+++ yosys-0.2.0+/Makefile	2014-04-13 02:59:49.564092043 +0200
-@@ -85,9 +85,9 @@
- TARGETS += yosys-svgviewer
+--- yosys.orig/Makefile	2014-09-05 22:17:14.586545422 +0200
++++ yosys/Makefile	2014-09-05 22:17:29.818545586 +0200
+@@ -110,9 +110,9 @@
+ LDFLAGS += -pg
  endif
  
 -ifeq ($(ENABLE_ABC),1)

@@ -1,32 +1,47 @@
-Index: yosys-0.2.0+/Makefile
+Index: yosys/Makefile
 ===================================================================
---- yosys-0.2.0+.orig/Makefile	2014-04-13 00:02:10.768001468 +0200
-+++ yosys-0.2.0+/Makefile	2014-04-13 00:18:25.476009751 +0200
-@@ -157,12 +157,12 @@
+--- yosys.orig/Makefile	2014-09-05 22:18:08.594546002 +0200
++++ yosys/Makefile	2014-09-05 22:19:16.926546735 +0200
+@@ -233,20 +233,20 @@
  yosys-abc: abc/abc-$(ABCREV)
- 	cp abc/abc-$(ABCREV) yosys-abc
+ 	$(P) cp abc/abc-$(ABCREV) yosys-abc
  
 -test: $(TARGETS) $(EXTRA_TARGETS)
--	cd tests/simple && bash run-test.sh
--	cd tests/hana && bash run-test.sh
--	cd tests/asicworld && bash run-test.sh
--	cd tests/techmap && bash run-test.sh
--	cd tests/sat && bash run-test.sh
+-	+cd tests/simple && bash run-test.sh
+-	+cd tests/hana && bash run-test.sh
+-	+cd tests/asicworld && bash run-test.sh
+-	+cd tests/realmath && bash run-test.sh
+-	+cd tests/share && bash run-test.sh
+-	+cd tests/fsm && bash run-test.sh
+-	+cd tests/techmap && bash run-test.sh
+-	+cd tests/memories && bash run-test.sh
+-	+cd tests/various && bash run-test.sh
+-	+cd tests/sat && bash run-test.sh
+-	@echo ""
+-	@echo "  Passed \"make test\"."
+-	@echo ""
 +#test: $(TARGETS) $(EXTRA_TARGETS)
-+#	cd tests/simple && bash run-test.sh
-+#	cd tests/hana && bash run-test.sh
-+#	cd tests/asicworld && bash run-test.sh
-+#	cd tests/techmap && bash run-test.sh
-+#	cd tests/sat && bash run-test.sh
++#	+cd tests/simple && bash run-test.sh
++#	+cd tests/hana && bash run-test.sh
++#	+cd tests/asicworld && bash run-test.sh
++#	+cd tests/realmath && bash run-test.sh
++#	+cd tests/share && bash run-test.sh
++#	+cd tests/fsm && bash run-test.sh
++#	+cd tests/techmap && bash run-test.sh
++#	+cd tests/memories && bash run-test.sh
++#	+cd tests/various && bash run-test.sh
++#	+cd tests/sat && bash run-test.sh
++#	@echo ""
++#	@echo "  Passed \"make test\"."
++#	@echo ""
  
- install: $(TARGETS) $(EXTRA_TARGETS)
- 	$(INSTALL_SUDO) mkdir -p $(DESTDIR)/bin
-@@ -219,6 +219,7 @@
+ VALGRIND ?= valgrind --error-exitcode=1 --leak-check=full --show-reachable=yes --errors-for-leak-kinds=all
+ 
+@@ -327,6 +327,6 @@
  -include kernel/*.d
  -include techlibs/*/*.d
  
 -.PHONY: all top-all abc test install install-abc manual clean mrproper qtcreator
-+#.PHONY: all top-all abc test install install-abc manual clean mrproper qtcreator
 +.PHONY: all top-all abc install install-abc manual clean mrproper qtcreator
- .PHONY: config-clean config-clang-debug config-gcc-debug config-release
+ .PHONY: config-clean config-clang config-gcc config-gcc-4.6 config-gprof config-sudo
  

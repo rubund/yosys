@@ -1,10 +1,10 @@
-Index: yosys-0.2.0+/Makefile
+Index: yosys/Makefile
 ===================================================================
---- yosys-0.2.0+.orig/Makefile	2014-04-13 12:11:25.416694559 +0200
-+++ yosys-0.2.0+/Makefile	2014-04-13 12:12:00.200694857 +0200
-@@ -164,11 +164,11 @@
- #	cd tests/techmap && bash run-test.sh
- #	cd tests/sat && bash run-test.sh
+--- yosys.orig/Makefile	2014-09-05 22:19:51.746547108 +0200
++++ yosys/Makefile	2014-09-05 22:20:14.654547354 +0200
+@@ -262,11 +262,11 @@
+ 	@echo "  Passed \"make vloghtb\"."
+ 	@echo ""
  
 -install: $(TARGETS) $(EXTRA_TARGETS)
 -	$(INSTALL_SUDO) mkdir -p $(DESTDIR)/bin
