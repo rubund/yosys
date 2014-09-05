@@ -1,4 +1,5 @@
-gitrevision.diff
-removeabc.diff
-notruntests.diff
-installpath.diff
+01_gitrevision.patch
+02_removeabc.patch
+03_notruntests.patch
+04_installpath.patch
+05_abc_executable.patch

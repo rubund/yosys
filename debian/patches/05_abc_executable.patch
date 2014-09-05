@@ -1,0 +1,13 @@
+Index: yosys/passes/abc/abc.cc
+===================================================================
+--- yosys.orig/passes/abc/abc.cc	2014-09-05 22:04:33.726537262 +0200
++++ yosys/passes/abc/abc.cc	2014-09-05 22:10:03.426540798 +0200
+@@ -1095,7 +1095,7 @@
+ 		log_header("Executing ABC pass (technology mapping using ABC).\n");
+ 		log_push();
+ 
+-		std::string exe_file = proc_self_dirname() + "yosys-abc";
++		std::string exe_file = proc_self_dirname() + "abc";
+ 		std::string script_file, liberty_file, constr_file, clk_str, delay_target;
+ 		bool dff_mode = false, keepff = false, cleanup = true;
+ 		int lut_mode = 0;
