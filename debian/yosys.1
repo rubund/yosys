@@ -2,7 +2,7 @@
 .\" First parameter, NAME, should be all caps
 .\" Second parameter, SECTION, should be 1-8, maybe w/ subsection
 .\" other parameters are allowed: see man(7), man(1)
-.TH YOSYS SECTION "April 12, 2014"
+.TH YOSYS 1 "April 12, 2014"
 .\" Please adjust this date whenever revising the manpage.
 .\"
 .\" Some roff macros, for reference:
@@ -19,7 +19,7 @@
 yosys \- Yosys Open SYnthesis Suite 
 .SH SYNOPSIS
 .B yosys
-.RI [-V]\ [-S]\ [-q]\ [-v\ <level>\ [-t]\ [-l\ <logfile>]\ [-o\ <outfile>]\ [-f\ <frontend>]\ [-h\ cmd]\ [{-s|-c}\ <scriptfile>]\ [-p\ <pass>\ [-p\ ..]]\ [-b\ <backend>]\ [-m\ <module\_file>]\ [<infile>\ [..]] 
+.RI [\-V]\ [\-S]\ [\-q]\ [\-v\ <level>\ [\-t]\ [\-l\ <logfile>]\ [\-o\ <outfile>]\ [\-f\ <frontend>]\ [\-h\ cmd]\ [{\-s|\-c}\ <scriptfile>]\ [\-p\ <pass>\ [\-p\ ..]]\ [\-b\ <backend>]\ [\-m\ <module\_file>]\ [<infile>\ [..]] 
 .SH DESCRIPTION
 This manual page documents briefly the
 .B yosys
@@ -36,7 +36,7 @@ A summary of options is included below.
 quiet operation. only write error message to console
 .TP
 .B \-v <level>
-print log headers up to level <level> to the console. (implies -q)
+print log headers up to level <level> to the console. (implies \-q)
 .TP
 .B \-t
 annotate all log messages with a time stamp
@@ -72,10 +72,10 @@ load the specified module (aka plugin)
 print version information and exit
 .TP
 .B \-S
-The option -S is an alias for the following options that perform a simple
+The option \-S is an alias for the following options that perform a simple
 transformation of the input to a gate-level netlist.
 
-    -p hierarchy -p proc -p opt -p memory -p opt -p techmap -p opt
+    \-p hierarchy \-p proc \-p opt \-p memory \-p opt \-p techmap \-p opt
 .SH AUTHOR
 yosys was written by Clifford Wolf <clifford@clifford.at>.
 .PP
