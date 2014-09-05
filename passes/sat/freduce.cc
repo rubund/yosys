@@ -349,7 +349,7 @@ struct PerformReduction
 			std::vector<RTLIL::SigBit> bucket_sigbits;
 			for (int idx : bucket)
 				bucket_sigbits.push_back(out_bits[idx]);
-			log("%s  Trying to shatter bucket with %d signals: %s\n", indt, int(bucket.size()), log_signal(RTLIL::SigSpec(bucket_sigbits).optimized()));
+			log("%s  Trying to shatter bucket with %d signals: %s\n", indt, int(bucket.size()), log_signal(bucket_sigbits));
 		}
 
 		std::vector<int> sat_set_list, sat_clr_list;
@@ -494,7 +494,7 @@ struct PerformReduction
 				std::vector<RTLIL::SigBit> r_sigbits;
 				for (int idx : r)
 					r_sigbits.push_back(out_bits[idx]);
-				log("  Found group of %d equivialent signals: %s\n", int(r.size()), log_signal(RTLIL::SigSpec(r_sigbits).optimized()));
+				log("  Found group of %d equivialent signals: %s\n", int(r.size()), log_signal(r_sigbits));
 			}
 
 			std::vector<int> undef_slaves;
@@ -602,15 +602,15 @@ struct FreduceWorker
 
 		int bits_full_total = 0;
 		std::vector<std::set<RTLIL::SigBit>> batches;
-		for (auto &it : module->wires)
+		for (auto &it : module->wires_)
 			if (it.second->port_input) {
 				batches.push_back(sigmap(it.second).to_sigbit_set());
 				bits_full_total += it.second->width;
 			}
-		for (auto &it : module->cells) {
+		for (auto &it : module->cells_) {
 			if (ct.cell_known(it.second->type)) {
 				std::set<RTLIL::SigBit> inputs, outputs;
-				for (auto &port : it.second->connections) {
+				for (auto &port : it.second->connections()) {
 					std::vector<RTLIL::SigBit> bits = sigmap(port.second).to_sigbit_vector();
 					if (ct.cell_output(it.second->type, port.first))
 						outputs.insert(bits.begin(), bits.end());
@@ -623,8 +623,8 @@ struct FreduceWorker
 				batches.push_back(outputs);
 				bits_full_total += outputs.size();
 			}
-			if (inv_mode && it.second->type == "$_INV_")
-				inv_pairs.insert(std::pair<RTLIL::SigBit, RTLIL::SigBit>(sigmap(it.second->connections.at("\\A")), sigmap(it.second->connections.at("\\Y"))));
+			if (inv_mode && it.second->type == "$_NOT_")
+				inv_pairs.insert(std::pair<RTLIL::SigBit, RTLIL::SigBit>(sigmap(it.second->getPort("\\A")), sigmap(it.second->getPort("\\Y"))));
 		}
 
 		int bits_count = 0;
@@ -640,7 +640,7 @@ struct FreduceWorker
 
 		found_selected_wire:
 			log("  Finding reduced input cone for signal batch %s%c\n",
-					log_signal(RTLIL::SigSpec(std::vector<RTLIL::SigBit>(batch.begin(), batch.end())).optimized()), verbose_level ? ':' : '.');
+					log_signal(batch), verbose_level ? ':' : '.');
 
 			FindReducedInputs infinder(sigmap, drivers);
 			for (auto &bit : batch) {
@@ -663,12 +663,12 @@ struct FreduceWorker
 				continue;
 
 			if (bucket.first.size() == 0) {
-				log("  Finding const values for bucket %s%c\n", log_signal(RTLIL::SigSpec(bucket.second).optimized()), verbose_level ? ':' : '.');
+				log("  Finding const values for bucket %s%c\n", log_signal(bucket.second), verbose_level ? ':' : '.');
 				PerformReduction worker(sigmap, drivers, inv_pairs, bucket.second, bucket.first.size());
 				for (size_t idx = 0; idx < bucket.second.size(); idx++)
 					worker.analyze_const(equiv, idx);
 			} else {
-				log("  Trying to shatter bucket %s%c\n", log_signal(RTLIL::SigSpec(bucket.second).optimized()), verbose_level ? ':' : '.');
+				log("  Trying to shatter bucket %s%c\n", log_signal(bucket.second), verbose_level ? ':' : '.');
 				PerformReduction worker(sigmap, drivers, inv_pairs, bucket.second, bucket.first.size());
 				worker.analyze(equiv, 100 * bucket_count / (buckets.size() + 1));
 			}
@@ -707,29 +707,26 @@ struct FreduceWorker
 				log("      Connect slave%s: %s\n", grp[i].inverted ? " using inverter" : "", log_signal(grp[i].bit));
 
 				RTLIL::Cell *drv = drivers.at(grp[i].bit).first;
-				RTLIL::Wire *dummy_wire = module->new_wire(1, NEW_ID);
-				for (auto &port : drv->connections)
+				RTLIL::Wire *dummy_wire = module->addWire(NEW_ID);
+				for (auto &port : drv->connections_)
 					if (ct.cell_output(drv->type, port.first))
 						sigmap(port.second).replace(grp[i].bit, dummy_wire, &port.second);
 
 				if (grp[i].inverted)
 				{
-					if (inv_sig.width == 0)
+					if (inv_sig.size() == 0)
 					{
-						inv_sig = module->new_wire(1, NEW_ID);
+						inv_sig = module->addWire(NEW_ID);
 
-						RTLIL::Cell *inv_cell = new RTLIL::Cell;
-						inv_cell->name = NEW_ID;
-						inv_cell->type = "$_INV_";
-						inv_cell->connections["\\A"] = grp[0].bit;
-						inv_cell->connections["\\Y"] = inv_sig;
-						module->add(inv_cell);
+						RTLIL::Cell *inv_cell = module->addCell(NEW_ID, "$_NOT_");
+						inv_cell->setPort("\\A", grp[0].bit);
+						inv_cell->setPort("\\Y", inv_sig);
 					}
 
-					module->connections.push_back(RTLIL::SigSig(grp[i].bit, inv_sig));
+					module->connect(RTLIL::SigSig(grp[i].bit, inv_sig));
 				}
 				else
-					module->connections.push_back(RTLIL::SigSig(grp[i].bit, grp[0].bit));
+					module->connect(RTLIL::SigSig(grp[i].bit, grp[0].bit));
 
 				rewired_sigbits++;
 			}
@@ -820,7 +817,7 @@ struct FreducePass : public Pass {
 		extra_args(args, argidx, design);
 
 		int bitcount = 0;
-		for (auto &mod_it : design->modules) {
+		for (auto &mod_it : design->modules_) {
 			RTLIL::Module *module = mod_it.second;
 			if (design->selected(module))
 				bitcount += FreduceWorker(design, module).run();

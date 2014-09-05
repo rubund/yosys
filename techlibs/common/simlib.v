@@ -55,30 +55,6 @@ endmodule
 
 // --------------------------------------------------------
 
-module \$bu0 (A, Y);
-
-parameter A_SIGNED = 0;
-parameter A_WIDTH = 0;
-parameter Y_WIDTH = 0;
-
-input [A_WIDTH-1:0] A;
-output [Y_WIDTH-1:0] Y;
-
-generate
-	if (!A_SIGNED && 0 < A_WIDTH && A_WIDTH < Y_WIDTH) begin:BLOCK1
-		assign Y[A_WIDTH-1:0] = A;
-		assign Y[Y_WIDTH-1:A_WIDTH] = 0;
-	end else if (A_SIGNED) begin:BLOCK2
-		assign Y = $signed(A);
-	end else begin:BLOCK3
-		assign Y = A;
-	end
-endgenerate
-
-endmodule
-
-// --------------------------------------------------------
-
 module \$pos (A, Y);
 
 parameter A_SIGNED = 0;
@@ -411,6 +387,103 @@ generate
 		assign Y = $signed(A) >>> B;
 	end else begin:BLOCK2
 		assign Y = A >>> B;
+	end
+endgenerate
+
+endmodule
+
+// --------------------------------------------------------
+
+module \$shift (A, B, Y);
+
+parameter A_SIGNED = 0;
+parameter B_SIGNED = 0;
+parameter A_WIDTH = 0;
+parameter B_WIDTH = 0;
+parameter Y_WIDTH = 0;
+
+input [A_WIDTH-1:0] A;
+input [B_WIDTH-1:0] B;
+output [Y_WIDTH-1:0] Y;
+
+generate
+	if (B_SIGNED) begin:BLOCK1
+		assign Y = $signed(B) < 0 ? A << -B : A >> B;
+	end else begin:BLOCK2
+		assign Y = A >> B;
+	end
+endgenerate
+
+endmodule
+
+// --------------------------------------------------------
+
+module \$shiftx (A, B, Y);
+
+parameter A_SIGNED = 0;
+parameter B_SIGNED = 0;
+parameter A_WIDTH = 0;
+parameter B_WIDTH = 0;
+parameter Y_WIDTH = 0;
+
+input [A_WIDTH-1:0] A;
+input [B_WIDTH-1:0] B;
+output [Y_WIDTH-1:0] Y;
+
+generate
+	if (Y_WIDTH > 0)
+		if (B_SIGNED) begin:BLOCK1
+			assign Y = A[$signed(B) +: Y_WIDTH];
+		end else begin:BLOCK2
+			assign Y = A[B +: Y_WIDTH];
+		end
+endgenerate
+
+endmodule
+
+// --------------------------------------------------------
+
+module \$alu (A, B, CI, BI, X, Y, CO);
+
+parameter A_SIGNED = 0;
+parameter B_SIGNED = 0;
+parameter A_WIDTH = 1;
+parameter B_WIDTH = 1;
+parameter Y_WIDTH = 1;
+
+input [A_WIDTH-1:0] A;
+input [B_WIDTH-1:0] B;
+output [Y_WIDTH-1:0] X, Y;
+
+input CI, BI;
+output [Y_WIDTH-1:0] CO;
+
+wire [Y_WIDTH-1:0] AA, BB;
+
+generate
+	if (A_SIGNED && B_SIGNED) begin:BLOCK1
+		assign AA = $signed(A), BB = BI ? ~$signed(B) : $signed(B);
+	end else begin:BLOCK2
+		assign AA = $unsigned(A), BB = BI ? ~$unsigned(B) : $unsigned(B);
+	end
+endgenerate
+
+// this is 'x' if Y and CO should be all 'x', and '0' otherwise
+wire y_co_undef = ^{A, A, B, B, CI, CI, BI, BI};
+
+assign X = AA ^ BB;
+assign Y = (AA + BB + CI) ^ {Y_WIDTH{y_co_undef}};
+
+function get_carry;
+	input a, b, c;
+	get_carry = (a&b) | (a&c) | (b&c);
+endfunction
+
+genvar i;
+generate
+	assign CO[0] = get_carry(AA[0], BB[0], CI) ^ y_co_undef;
+	for (i = 1; i < Y_WIDTH; i = i+1) begin:BLOCK3
+		assign CO[i] = get_carry(AA[i], BB[i], CO[i-1]) ^ y_co_undef;
 	end
 endgenerate
 
@@ -889,39 +962,16 @@ input [S_WIDTH-1:0] S;
 output reg [WIDTH-1:0] Y;
 
 integer i;
+reg found_active_sel_bit;
 
 always @* begin
 	Y = A;
-	for (i = 0; i < S_WIDTH; i = i+1)
-		if (S[i])
-			Y = B >> (WIDTH*i);
-end
-
-endmodule
-
-// --------------------------------------------------------
-
-module \$safe_pmux (A, B, S, Y);
-
-parameter WIDTH = 0;
-parameter S_WIDTH = 0;
-
-input [WIDTH-1:0] A;
-input [WIDTH*S_WIDTH-1:0] B;
-input [S_WIDTH-1:0] S;
-output reg [WIDTH-1:0] Y;
-
-integer i, j;
-
-always @* begin
-	j = 0;
+	found_active_sel_bit = 0;
 	for (i = 0; i < S_WIDTH; i = i+1)
 		if (S[i]) begin
-			Y = B >> (WIDTH*i);
-			j = j + 1;
+			Y = found_active_sel_bit ? 'bx : B >> (WIDTH*i);
+			found_active_sel_bit = 1;
 		end
-	if (j != 1)
-		Y = A;
 end
 
 endmodule
@@ -929,13 +979,13 @@ endmodule
 // --------------------------------------------------------
 `ifndef SIMLIB_NOLUT
 
-module \$lut (I, O);
+module \$lut (A, Y);
 
 parameter WIDTH = 0;
 parameter LUT = 0;
 
-input [WIDTH-1:0] I;
-output reg O;
+input [WIDTH-1:0] A;
+output reg Y;
 
 wire lut0_out, lut1_out;
 
@@ -943,18 +993,18 @@ generate
 	if (WIDTH <= 1) begin:simple
 		assign {lut1_out, lut0_out} = LUT;
 	end else begin:complex
-		\$lut #( .WIDTH(WIDTH-1), .LUT(LUT                  ) ) lut0 ( .I(I[WIDTH-2:0]), .O(lut0_out) );
-		\$lut #( .WIDTH(WIDTH-1), .LUT(LUT >> (2**(WIDTH-1))) ) lut1 ( .I(I[WIDTH-2:0]), .O(lut1_out) );
+		\$lut #( .WIDTH(WIDTH-1), .LUT(LUT                  ) ) lut0 ( .A(A[WIDTH-2:0]), .Y(lut0_out) );
+		\$lut #( .WIDTH(WIDTH-1), .LUT(LUT >> (2**(WIDTH-1))) ) lut1 ( .A(A[WIDTH-2:0]), .Y(lut1_out) );
 	end
 
 	if (WIDTH > 0) begin:lutlogic
 		always @* begin
-			casez ({I[WIDTH-1], lut0_out, lut1_out})
-				3'b?11: O = 1'b1;
-				3'b?00: O = 1'b0;
-				3'b0??: O = lut0_out;
-				3'b1??: O = lut1_out;
-				default: O = 1'bx;
+			casez ({A[WIDTH-1], lut0_out, lut1_out})
+				3'b?11: Y = 1'b1;
+				3'b?00: Y = 1'b0;
+				3'b0??: Y = lut0_out;
+				3'b1??: Y = lut1_out;
+				default: Y = 1'bx;
 			endcase
 		end
 	end
@@ -1264,7 +1314,8 @@ parameter WIDTH = 8;
 parameter CLK_ENABLE = 0;
 parameter CLK_POLARITY = 0;
 
-input CLK, EN;
+input CLK;
+input [WIDTH-1:0] EN;
 input [ABITS-1:0] ADDR;
 input [WIDTH-1:0] DATA;
 
@@ -1300,7 +1351,8 @@ input [RD_PORTS-1:0] RD_CLK;
 input [RD_PORTS*ABITS-1:0] RD_ADDR;
 output reg [RD_PORTS*WIDTH-1:0] RD_DATA;
 
-input [WR_PORTS-1:0] WR_CLK, WR_EN;
+input [WR_PORTS-1:0] WR_CLK;
+input [WR_PORTS*WIDTH-1:0] WR_EN;
 input [WR_PORTS*ABITS-1:0] WR_ADDR;
 input [WR_PORTS*WIDTH-1:0] WR_DATA;
 
@@ -1313,71 +1365,94 @@ generate
 	for (i = 0; i < RD_PORTS; i = i+1) begin:rd
 		if (RD_CLK_ENABLE[i] == 0) begin:rd_noclk
 			always @(RD_ADDR or update_async_rd)
-				RD_DATA[ i*WIDTH +: WIDTH ] <= data[ RD_ADDR[ i*ABITS +: ABITS ] - OFFSET ];
+				RD_DATA[i*WIDTH +: WIDTH] <= data[RD_ADDR[i*ABITS +: ABITS] - OFFSET];
 		end else
 		if (RD_TRANSPARENT[i] == 1) begin:rd_transparent
 			reg [ABITS-1:0] addr_buf;
 			if (RD_CLK_POLARITY[i] == 1) begin:rd_trans_posclk
 				always @(posedge RD_CLK[i])
-					addr_buf <= RD_ADDR[ i*ABITS +: ABITS ];
+					addr_buf <= RD_ADDR[i*ABITS +: ABITS];
 			end else begin:rd_trans_negclk
 				always @(negedge RD_CLK[i])
-					addr_buf <= RD_ADDR[ i*ABITS +: ABITS ];
+					addr_buf <= RD_ADDR[i*ABITS +: ABITS];
 			end
 			always @(addr_buf or update_async_rd)
-				RD_DATA[ i*WIDTH +: WIDTH ] <= data[ addr_buf - OFFSET ];
+				RD_DATA[i*WIDTH +: WIDTH] <= data[addr_buf - OFFSET];
 		end else begin:rd_notransparent
 			if (RD_CLK_POLARITY[i] == 1) begin:rd_notrans_posclk
 				always @(posedge RD_CLK[i])
-					RD_DATA[ i*WIDTH +: WIDTH ] <= data[ RD_ADDR[ i*ABITS +: ABITS ] - OFFSET ];
+					RD_DATA[i*WIDTH +: WIDTH] <= data[RD_ADDR[i*ABITS +: ABITS] - OFFSET];
 			end else begin:rd_notrans_negclk
 				always @(negedge RD_CLK[i])
-					RD_DATA[ i*WIDTH +: WIDTH ] <= data[ RD_ADDR[ i*ABITS +: ABITS ] - OFFSET ];
+					RD_DATA[i*WIDTH +: WIDTH] <= data[RD_ADDR[i*ABITS +: ABITS] - OFFSET];
 			end
 		end
 	end
 
 	for (i = 0; i < WR_PORTS; i = i+1) begin:wr
-		integer k;
-		reg found_collision;
+		integer k, n;
+		reg found_collision, run_update;
 		if (WR_CLK_ENABLE[i] == 0) begin:wr_noclk
 			always @(WR_ADDR or WR_DATA or WR_EN) begin
-				if (WR_EN[i]) begin
-					found_collision = 0;
-					for (k = i+1; k < WR_PORTS; k = k+1)
-						if (WR_EN[k] && WR_ADDR[ i*ABITS +: ABITS ] == WR_ADDR[ k*ABITS +: ABITS ])
-							found_collision = 1;
-					if (!found_collision) begin
-						data[ WR_ADDR[ i*ABITS +: ABITS ] - OFFSET ] <= WR_DATA[ i*WIDTH +: WIDTH ];
-						update_async_rd <= 1; update_async_rd <= 0;
+				run_update = 0;
+				for (n = 0; n < WIDTH; n = n+1) begin
+					if (WR_EN[i*WIDTH + n]) begin
+						found_collision = 0;
+						for (k = i+1; k < WR_PORTS; k = k+1)
+							if (WR_EN[k*WIDTH + n] && WR_ADDR[i*ABITS +: ABITS] == WR_ADDR[k*ABITS +: ABITS])
+								found_collision = 1;
+						if (!found_collision) begin
+							data[WR_ADDR[i*ABITS +: ABITS] - OFFSET][n] <= WR_DATA[i*WIDTH + n];
+							run_update = 1;
+						end
 					end
+				end
+				if (run_update) begin
+					update_async_rd <= 1;
+					update_async_rd <= 0;
 				end
 			end
 		end else
 		if (WR_CLK_POLARITY[i] == 1) begin:rd_posclk
-			always @(posedge WR_CLK[i])
-				if (WR_EN[i]) begin
-					found_collision = 0;
-					for (k = i+1; k < WR_PORTS; k = k+1)
-						if (WR_EN[k] && WR_ADDR[ i*ABITS +: ABITS ] == WR_ADDR[ k*ABITS +: ABITS ])
-							found_collision = 1;
-					if (!found_collision) begin
-						data[ WR_ADDR[ i*ABITS +: ABITS ] - OFFSET ] <= WR_DATA[ i*WIDTH +: WIDTH ];
-						update_async_rd <= 1; update_async_rd <= 0;
+			always @(posedge WR_CLK[i]) begin
+				run_update = 0;
+				for (n = 0; n < WIDTH; n = n+1) begin
+					if (WR_EN[i*WIDTH + n]) begin
+						found_collision = 0;
+						for (k = i+1; k < WR_PORTS; k = k+1)
+							if (WR_EN[k*WIDTH + n] && WR_ADDR[i*ABITS +: ABITS] == WR_ADDR[k*ABITS +: ABITS])
+								found_collision = 1;
+						if (!found_collision) begin
+							data[WR_ADDR[i*ABITS +: ABITS] - OFFSET][n] <= WR_DATA[i*WIDTH + n];
+							run_update = 1;
+						end
 					end
 				end
+				if (run_update) begin
+					update_async_rd <= 1;
+					update_async_rd <= 0;
+				end
+			end
 		end else begin:rd_negclk
-			always @(negedge WR_CLK[i])
-				if (WR_EN[i]) begin
-					found_collision = 0;
-					for (k = i+1; k < WR_PORTS; k = k+1)
-						if (WR_EN[k] && WR_ADDR[ i*ABITS +: ABITS ] == WR_ADDR[ k*ABITS +: ABITS ])
-							found_collision = 1;
-					if (!found_collision) begin
-						data[ WR_ADDR[ i*ABITS +: ABITS ] - OFFSET ] <= WR_DATA[ i*WIDTH +: WIDTH ];
-						update_async_rd <= 1; update_async_rd <= 0;
+			always @(negedge WR_CLK[i]) begin
+				run_update = 0;
+				for (n = 0; n < WIDTH; n = n+1) begin
+					if (WR_EN[i*WIDTH + n]) begin
+						found_collision = 0;
+						for (k = i+1; k < WR_PORTS; k = k+1)
+							if (WR_EN[k*WIDTH + n] && WR_ADDR[i*ABITS +: ABITS] == WR_ADDR[k*ABITS +: ABITS])
+								found_collision = 1;
+						if (!found_collision) begin
+							data[WR_ADDR[i*ABITS +: ABITS] - OFFSET][n] <= WR_DATA[i*WIDTH + n];
+							run_update = 1;
+						end
 					end
 				end
+				if (run_update) begin
+					update_async_rd <= 1;
+					update_async_rd <= 0;
+				end
+			end
 		end
 	end
 

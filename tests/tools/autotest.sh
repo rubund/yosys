@@ -6,32 +6,41 @@ use_xsim=false
 use_modelsim=false
 verbose=false
 keeprunning=false
+makejmode=false
 frontend="verilog"
 backend_opts="-noattr -noexpr"
+autotb_opts=""
 scriptfiles=""
 scriptopt=""
 toolsdir="$(cd $(dirname $0); pwd)"
+warn_iverilog_git=false
 
 if [ ! -f $toolsdir/cmp_tbdata -o $toolsdir/cmp_tbdata.c -nt $toolsdir/cmp_tbdata ]; then
 	( set -ex;  gcc -Wall -o $toolsdir/cmp_tbdata $toolsdir/cmp_tbdata.c; ) || exit 1
 fi
 
-while getopts xml:wkvrf:s:p: opt; do
+while getopts xmGl:wkjvref:s:p:n: opt; do
 	case "$opt" in
 		x)
 			use_xsim=true ;;
 		m)
 			use_modelsim=true ;;
+		G)
+			warn_iverilog_git=true ;;
 		l)
 			libs="$libs $(cd $(dirname $OPTARG); pwd)/$(basename $OPTARG)";;
 		w)
 			genvcd=true ;;
 		k)
 			keeprunning=true ;;
+		j)
+			makejmode=true ;;
 		v)
 			verbose=true ;;
 		r)
 			backend_opts="$backend_opts -norename" ;;
+		e)
+			backend_opts="$( echo " $backend_opts " | sed 's, -noexpr ,,; s,^ ,,; s, $,,;'; )" ;;
 		f)
 			frontend="$OPTARG" ;;
 		s)
@@ -39,8 +48,10 @@ while getopts xml:wkvrf:s:p: opt; do
 			scriptfiles="$scriptfiles $OPTARG" ;;
 		p)
 			scriptopt="$OPTARG" ;;
+		n)
+			autotb_opts="$autotb_opts -n $OPTARG" ;;
 		*)
-			echo "Usage: $0 [-x|-m] [-w] [-k] [-v] [-r] [-l libs] [-f frontend] [-s script] [-p cmdstring] verilog-files\n" >&2
+			echo "Usage: $0 [-x|-m] [-w] [-k] [-j] [-v] [-r] [-e] [-l libs] [-f frontend] [-s script] [-p cmdstring] verilog-files\n" >&2
 			exit 1
 	esac
 done
@@ -80,7 +91,13 @@ do
 		exit 1
 	fi
 	[[ "$bn" == *_tb ]] && continue
-	echo -n "Test: $bn "
+
+	if $makejmode; then
+		status_prefix="Test: $bn "
+	else
+		status_prefix=""
+		echo -n "Test: $bn "
+	fi
 
 	rm -f ${bn}.{err,log,sikp}
 	mkdir -p ${bn}.out
@@ -90,7 +107,7 @@ do
 		cd ${bn}.out
 		cp ../$fn $fn
 		if [ ! -f ../${bn}_tb.v ]; then
-			"$toolsdir"/../../yosys -b autotest -o ${bn}_tb.v $fn
+			"$toolsdir"/../../yosys -b "test_autotb $autotb_opts" -o ${bn}_tb.v $fn
 		else
 			cp ../${bn}_tb.v ${bn}_tb.v
 		fi
@@ -125,8 +142,8 @@ do
 		elif [ "$frontend" = "verific_gates" ]; then
 			test_passes -p "verific -vlog2k $fn; verific -import -gates -all; opt; memory;;"
 		else
-			test_passes -f "$frontend" -p "hierarchy; proc; opt; memory; opt; fsm; opt" $fn
-			test_passes -f "$frontend" -p "hierarchy; proc; opt; memory; opt; fsm; opt; techmap; opt; abc -dff; opt" $fn
+			test_passes -f "$frontend" -p "hierarchy; proc; opt_const; opt_share;; wreduce;; share;; opt; memory -nomap;; fsm; opt" $fn
+			test_passes -f "$frontend" -p "hierarchy; proc; opt; memory; opt; fsm; opt -fine; techmap; opt; abc -dff; opt" $fn
 		fi
 		touch ../${bn}.log
 	}
@@ -141,11 +158,17 @@ do
 
 	if [ -f ${bn}.log ]; then
 		mv ${bn}.err ${bn}.log
-		echo "-> ok"
+		echo "${status_prefix}-> ok"
 	elif [ -f ${bn}.skip ]; then
 		mv ${bn}.err ${bn}.skip
-		echo "-> skip"
-	else echo "-> ERROR!"; $keeprunning || exit 1; fi
+		echo "${status_prefix}-> skip"
+	else
+		echo "${status_prefix}-> ERROR!"
+		if $warn_iverilog_git; then
+			echo "Note: Make sure that 'iverilog' is an up-to-date git checkout of icarus verilog."
+		fi
+		$keeprunning || exit 1
+	fi
 done
 
 exit 0

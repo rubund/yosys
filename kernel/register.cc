@@ -17,52 +17,46 @@
  *
  */
 
-#include "kernel/compatibility.h"
-#include "kernel/register.h"
-#include "kernel/log.h"
-#include <assert.h>
+#include "kernel/yosys.h"
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <errno.h>
 
-using namespace REGISTER_INTERN;
+YOSYS_NAMESPACE_BEGIN
+
 #define MAX_REG_COUNT 1000
 
-namespace REGISTER_INTERN
-{
-	bool echo_mode = false;
-	int raw_register_count = 0;
-	bool raw_register_done = false;
-	Pass *raw_register_array[MAX_REG_COUNT];
+bool echo_mode = false;
+Pass *first_queued_pass;
+Pass *current_pass;
 
-	std::map<std::string, Frontend*> frontend_register;
-	std::map<std::string, Pass*> pass_register;
-	std::map<std::string, Backend*> backend_register;
-}
+std::map<std::string, Frontend*> frontend_register;
+std::map<std::string, Pass*> pass_register;
+std::map<std::string, Backend*> backend_register;
 
 std::vector<std::string> Frontend::next_args;
 
 Pass::Pass(std::string name, std::string short_help) : pass_name(name), short_help(short_help)
 {
-	assert(!raw_register_done);
-	assert(raw_register_count < MAX_REG_COUNT);
-	raw_register_array[raw_register_count++] = this;
+	next_queued_pass = first_queued_pass;
+	first_queued_pass = this;
+	call_counter = 0;
+	runtime_ns = 0;
 }
 
 void Pass::run_register()
 {
-	assert(pass_register.count(pass_name) == 0);
+	log_assert(pass_register.count(pass_name) == 0);
 	pass_register[pass_name] = this;
 }
 
 void Pass::init_register()
 {
-	if (raw_register_done)
-		done_register();
-	while (raw_register_count > 0)
-		raw_register_array[--raw_register_count]->run_register();
-	raw_register_done = true;
+	while (first_queued_pass) {
+		first_queued_pass->run_register();
+		first_queued_pass = first_queued_pass->next_queued_pass;
+	}
 }
 
 void Pass::done_register()
@@ -70,11 +64,30 @@ void Pass::done_register()
 	frontend_register.clear();
 	pass_register.clear();
 	backend_register.clear();
-	raw_register_done = false;
+	log_assert(first_queued_pass == NULL);
 }
 
 Pass::~Pass()
 {
+}
+
+Pass::pre_post_exec_state_t Pass::pre_execute()
+{
+	pre_post_exec_state_t state;
+	call_counter++;
+	state.begin_ns = PerformanceTimer::query();
+	state.parent_pass = current_pass;
+	current_pass = this;
+	return state;
+}
+
+void Pass::post_execute(Pass::pre_post_exec_state_t state)
+{
+	int64_t time_ns = PerformanceTimer::query() - state.begin_ns;
+	runtime_ns += time_ns;
+	current_pass = state.parent_pass;
+	if (current_pass)
+		current_pass->runtime_ns -= time_ns;
 }
 
 void Pass::help()
@@ -191,18 +204,20 @@ void Pass::call(RTLIL::Design *design, std::vector<std::string> args)
 		log_cmd_error("No such command: %s (type 'help' for a command overview)\n", args[0].c_str());
 
 	size_t orig_sel_stack_pos = design->selection_stack.size();
+	auto state = pass_register[args[0]]->pre_execute();
 	pass_register[args[0]]->execute(args, design);
+	pass_register[args[0]]->post_execute(state);
 	while (design->selection_stack.size() > orig_sel_stack_pos)
 		design->selection_stack.pop_back();
 
 	design->check();
 }
 
-void Pass::call_newsel(RTLIL::Design *design, std::string command)
+void Pass::call_on_selection(RTLIL::Design *design, const RTLIL::Selection &selection, std::string command)
 {
 	std::string backup_selected_active_module = design->selected_active_module;
 	design->selected_active_module.clear();
-	design->selection_stack.push_back(RTLIL::Selection());
+	design->selection_stack.push_back(selection);
 
 	Pass::call(design, command);
 
@@ -210,11 +225,11 @@ void Pass::call_newsel(RTLIL::Design *design, std::string command)
 	design->selected_active_module = backup_selected_active_module;
 }
 
-void Pass::call_newsel(RTLIL::Design *design, std::vector<std::string> args)
+void Pass::call_on_selection(RTLIL::Design *design, const RTLIL::Selection &selection, std::vector<std::string> args)
 {
 	std::string backup_selected_active_module = design->selected_active_module;
 	design->selected_active_module.clear();
-	design->selection_stack.push_back(RTLIL::Selection());
+	design->selection_stack.push_back(selection);
 
 	Pass::call(design, args);
 
@@ -222,16 +237,44 @@ void Pass::call_newsel(RTLIL::Design *design, std::vector<std::string> args)
 	design->selected_active_module = backup_selected_active_module;
 }
 
-Frontend::Frontend(std::string name, std::string short_help) : Pass("read_"+name, short_help), frontend_name(name)
+void Pass::call_on_module(RTLIL::Design *design, RTLIL::Module *module, std::string command)
+{
+	std::string backup_selected_active_module = design->selected_active_module;
+	design->selected_active_module = module->name.str();
+	design->selection_stack.push_back(RTLIL::Selection(false));
+	design->selection_stack.back().select(module);
+
+	Pass::call(design, command);
+
+	design->selection_stack.pop_back();
+	design->selected_active_module = backup_selected_active_module;
+}
+
+void Pass::call_on_module(RTLIL::Design *design, RTLIL::Module *module, std::vector<std::string> args)
+{
+	std::string backup_selected_active_module = design->selected_active_module;
+	design->selected_active_module = module->name.str();
+	design->selection_stack.push_back(RTLIL::Selection(false));
+	design->selection_stack.back().select(module);
+
+	Pass::call(design, args);
+
+	design->selection_stack.pop_back();
+	design->selected_active_module = backup_selected_active_module;
+}
+
+Frontend::Frontend(std::string name, std::string short_help) :
+		Pass(name.rfind("=", 0) == 0 ? name.substr(1) : "read_" + name, short_help),
+		frontend_name(name.rfind("=", 0) == 0 ? name.substr(1) : name)
 {
 }
 
 void Frontend::run_register()
 {
-	assert(pass_register.count(pass_name) == 0);
+	log_assert(pass_register.count(pass_name) == 0);
 	pass_register[pass_name] = this;
 
-	assert(frontend_register.count(frontend_name) == 0);
+	log_assert(frontend_register.count(frontend_name) == 0);
 	frontend_register[frontend_name] = this;
 }
 
@@ -241,17 +284,22 @@ Frontend::~Frontend()
 
 void Frontend::execute(std::vector<std::string> args, RTLIL::Design *design)
 {
-	assert(next_args.empty());
+	log_assert(next_args.empty());
 	do {
-		FILE *f = NULL;
+		std::istream *f = NULL;
 		next_args.clear();
+		auto state = pre_execute();
 		execute(f, std::string(), args, design);
+		post_execute(state);
 		args = next_args;
-		fclose(f);
+		delete f;
 	} while (!args.empty());
 }
 
-void Frontend::extra_args(FILE *&f, std::string &filename, std::vector<std::string> args, size_t argidx)
+FILE *Frontend::current_script_file = NULL;
+std::string Frontend::last_here_document;
+
+void Frontend::extra_args(std::istream *&f, std::string &filename, std::vector<std::string> args, size_t argidx)
 {
 	bool called_with_fp = f != NULL;
 
@@ -266,7 +314,41 @@ void Frontend::extra_args(FILE *&f, std::string &filename, std::vector<std::stri
 			cmd_error(args, argidx, "Extra filename argument in direct file mode.");
 
 		filename = arg;
-		f = fopen(filename.c_str(), "r");
+		if (filename == "<<" && argidx+1 < args.size())
+			filename += args[++argidx];
+		if (filename.substr(0, 2) == "<<") {
+			if (Frontend::current_script_file == NULL)
+				log_error("Unexpected here document '%s' outside of script!\n", filename.c_str());
+			if (filename.size() <= 2)
+				log_error("Missing EOT marker in here document!\n");
+			std::string eot_marker = filename.substr(2);
+			last_here_document.clear();
+			while (1) {
+				std::string buffer;
+				char block[4096];
+				while (1) {
+					if (fgets(block, 4096, Frontend::current_script_file) == NULL)
+						log_error("Unexpected end of file in here document '%s'!\n", filename.c_str());
+					buffer += block;
+					if (buffer.size() > 0 && (buffer[buffer.size() - 1] == '\n' || buffer[buffer.size() - 1] == '\r'))
+						break;
+				}
+				int indent = buffer.find_first_not_of(" \t\r\n");
+				if (buffer.substr(indent, eot_marker.size()) == eot_marker)
+					break;
+				last_here_document += buffer;
+			}
+			f = new std::istringstream(last_here_document);
+		} else {
+			if (filename.substr(0, 2) == "+/")
+				filename = proc_share_dirname() + filename.substr(1);
+			std::ifstream *ff = new std::ifstream;
+			ff->open(filename.c_str());
+			if (ff->fail())
+				delete ff;
+			else
+				f = ff;
+		}
 		if (f == NULL)
 			log_cmd_error("Can't open input file `%s' for reading: %s\n", filename.c_str(), strerror(errno));
 
@@ -290,7 +372,7 @@ void Frontend::extra_args(FILE *&f, std::string &filename, std::vector<std::stri
 	// cmd_log_args(args);
 }
 
-void Frontend::frontend_call(RTLIL::Design *design, FILE *f, std::string filename, std::string command)
+void Frontend::frontend_call(RTLIL::Design *design, std::istream *f, std::string filename, std::string command)
 {
 	std::vector<std::string> args;
 	char *s = strdup(command.c_str());
@@ -300,7 +382,7 @@ void Frontend::frontend_call(RTLIL::Design *design, FILE *f, std::string filenam
 	frontend_call(design, f, filename, args);
 }
 
-void Frontend::frontend_call(RTLIL::Design *design, FILE *f, std::string filename, std::vector<std::string> args)
+void Frontend::frontend_call(RTLIL::Design *design, std::istream *f, std::string filename, std::vector<std::string> args)
 {
 	if (args.size() == 0)
 		return;
@@ -308,10 +390,14 @@ void Frontend::frontend_call(RTLIL::Design *design, FILE *f, std::string filenam
 		log_cmd_error("No such frontend: %s\n", args[0].c_str());
 
 	if (f != NULL) {
+		auto state = frontend_register[args[0]]->pre_execute();
 		frontend_register[args[0]]->execute(f, filename, args, design);
+		frontend_register[args[0]]->post_execute(state);
 	} else if (filename == "-") {
-		FILE *f_stdin = stdin; // workaround for OpenBSD 'stdin' implementation
-		frontend_register[args[0]]->execute(f_stdin, "<stdin>", args, design);
+		std::istream *f_cin = &std::cin;
+		auto state = frontend_register[args[0]]->pre_execute();
+		frontend_register[args[0]]->execute(f_cin, "<stdin>", args, design);
+		frontend_register[args[0]]->post_execute(state);
 	} else {
 		if (!filename.empty())
 			args.push_back(filename);
@@ -321,16 +407,18 @@ void Frontend::frontend_call(RTLIL::Design *design, FILE *f, std::string filenam
 	design->check();
 }
 
-Backend::Backend(std::string name, std::string short_help) : Pass("write_"+name, short_help), backend_name(name)
+Backend::Backend(std::string name, std::string short_help) :
+		Pass(name.rfind("=", 0) == 0 ? name.substr(1) : "write_" + name, short_help),
+		backend_name(name.rfind("=", 0) == 0 ? name.substr(1) : name)
 {
 }
 
 void Backend::run_register()
 {
-	assert(pass_register.count(pass_name) == 0);
+	log_assert(pass_register.count(pass_name) == 0);
 	pass_register[pass_name] = this;
 
-	assert(backend_register.count(backend_name) == 0);
+	log_assert(backend_register.count(backend_name) == 0);
 	backend_register[backend_name] = this;
 }
 
@@ -340,13 +428,15 @@ Backend::~Backend()
 
 void Backend::execute(std::vector<std::string> args, RTLIL::Design *design)
 {
-	FILE *f = NULL;
+	std::ostream *f = NULL;
+	auto state = pre_execute();
 	execute(f, std::string(), args, design);
-	if (f != stdout)
-		fclose(f);
+	post_execute(state);
+	if (f != &std::cout)
+		delete f;
 }
 
-void Backend::extra_args(FILE *&f, std::string &filename, std::vector<std::string> args, size_t argidx)
+void Backend::extra_args(std::ostream *&f, std::string &filename, std::vector<std::string> args, size_t argidx)
 {
 	bool called_with_fp = f != NULL;
 
@@ -361,14 +451,18 @@ void Backend::extra_args(FILE *&f, std::string &filename, std::vector<std::strin
 
 		if (arg == "-") {
 			filename = "<stdout>";
-			f = stdout;
+			f = &std::cout;
 			continue;
 		}
 
 		filename = arg;
-		f = fopen(filename.c_str(), "w");
-		if (f == NULL)
+		std::ofstream *ff = new std::ofstream;
+		ff->open(filename.c_str(), std::ofstream::trunc);
+		if (ff->fail()) {
+			delete ff;
 			log_cmd_error("Can't open output file `%s' for writing: %s\n", filename.c_str(), strerror(errno));
+		}
+		f = ff;
 	}
 
 	if (called_with_fp)
@@ -378,11 +472,11 @@ void Backend::extra_args(FILE *&f, std::string &filename, std::vector<std::strin
 
 	if (f == NULL) {
 		filename = "<stdout>";
-		f = stdout;
+		f = &std::cout;
 	}
 }
 
-void Backend::backend_call(RTLIL::Design *design, FILE *f, std::string filename, std::string command)
+void Backend::backend_call(RTLIL::Design *design, std::ostream *f, std::string filename, std::string command)
 {
 	std::vector<std::string> args;
 	char *s = strdup(command.c_str());
@@ -392,7 +486,7 @@ void Backend::backend_call(RTLIL::Design *design, FILE *f, std::string filename,
 	backend_call(design, f, filename, args);
 }
 
-void Backend::backend_call(RTLIL::Design *design, FILE *f, std::string filename, std::vector<std::string> args)
+void Backend::backend_call(RTLIL::Design *design, std::ostream *f, std::string filename, std::vector<std::string> args)
 {
 	if (args.size() == 0)
 		return;
@@ -402,10 +496,14 @@ void Backend::backend_call(RTLIL::Design *design, FILE *f, std::string filename,
 	size_t orig_sel_stack_pos = design->selection_stack.size();
 
 	if (f != NULL) {
+		auto state = backend_register[args[0]]->pre_execute();
 		backend_register[args[0]]->execute(f, filename, args, design);
+		backend_register[args[0]]->post_execute(state);
 	} else if (filename == "-") {
-		FILE *f_stdout = stdout; // workaround for OpenBSD 'stdout' implementation
-		backend_register[args[0]]->execute(f_stdout, "<stdout>", args, design);
+		std::ostream *f_cout = &std::cout;
+		auto state = backend_register[args[0]]->pre_execute();
+		backend_register[args[0]]->execute(f_cout, "<stdout>", args, design);
+		backend_register[args[0]]->post_execute(state);
 	} else {
 		if (!filename.empty())
 			args.push_back(filename);
@@ -490,7 +588,7 @@ struct HelpPass : public Pass {
 	{
 		if (args.size() == 1) {
 			log("\n");
-			for (auto &it : REGISTER_INTERN::pass_register)
+			for (auto &it : pass_register)
 				log("    %-20s %s\n", it.first.c_str(), it.second->short_help.c_str());
 			log("\n");
 			log("Type 'help <command>' for more information on a command.\n");
@@ -500,7 +598,7 @@ struct HelpPass : public Pass {
 
 		if (args.size() == 2) {
 			if (args[1] == "-all") {
-				for (auto &it : REGISTER_INTERN::pass_register) {
+				for (auto &it : pass_register) {
 					log("\n\n");
 					log("%s  --  %s\n", it.first.c_str(), it.second->short_help.c_str());
 					for (size_t i = 0; i < it.first.size() + it.second->short_help.size() + 6; i++)
@@ -513,39 +611,31 @@ struct HelpPass : public Pass {
 			else if (args[1] == "-write-tex-command-reference-manual") {
 				FILE *f = fopen("command-reference-manual.tex", "wt");
 				fprintf(f, "%% Generated using the yosys 'help -write-tex-command-reference-manual' command.\n\n");
-				for (auto &it : REGISTER_INTERN::pass_register) {
-					size_t memsize;
-					char *memptr;
-					FILE *memf = open_memstream(&memptr, &memsize);
-					log_files.push_back(memf);
+				for (auto &it : pass_register) {
+					std::ostringstream buf;
+					log_streams.push_back(&buf);
 					it.second->help();
-					log_files.pop_back();
-					fclose(memf);
-					write_tex(f, it.first, it.second->short_help, memptr);
-					free(memptr);
+					log_streams.pop_back();
+					write_tex(f, it.first, it.second->short_help, buf.str());
 				}
 				fclose(f);
 			}
 			// this option is undocumented as it is for internal use only
 			else if (args[1] == "-write-web-command-reference-manual") {
 				FILE *f = fopen("templates/cmd_index.in", "wt");
-				for (auto &it : REGISTER_INTERN::pass_register) {
-					size_t memsize;
-					char *memptr;
-					FILE *memf = open_memstream(&memptr, &memsize);
-					log_files.push_back(memf);
+				for (auto &it : pass_register) {
+					std::ostringstream buf;
+					log_streams.push_back(&buf);
 					it.second->help();
-					log_files.pop_back();
-					fclose(memf);
-					write_html(f, it.first, it.second->short_help, memptr);
-					free(memptr);
+					log_streams.pop_back();
+					write_html(f, it.first, it.second->short_help, buf.str());
 				}
 				fclose(f);
 			}
-			else if (REGISTER_INTERN::pass_register.count(args[1]) == 0)
+			else if (pass_register.count(args[1]) == 0)
 				log("No such command: %s\n", args[1].c_str());
 			else
-				REGISTER_INTERN::pass_register.at(args[1])->help();
+				pass_register.at(args[1])->help();
 			return;
 		}
 
@@ -586,3 +676,5 @@ struct EchoPass : public Pass {
 	}
 } EchoPass;
  
+YOSYS_NAMESPACE_END
+

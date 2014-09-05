@@ -111,14 +111,14 @@ struct IopadmapPass : public Pass {
 		}
 		extra_args(args, argidx, design);
 
-		for (auto &it : design->modules)
+		for (auto &it : design->modules_)
 		{
 			RTLIL::Module *module = it.second;
 
-			if (!design->selected(module))
+			if (!design->selected(module) || module->get_bool_attribute("\\blackbox"))
 				continue;
 
-			for (auto &it2 : module->wires)
+			for (auto &it2 : module->wires_)
 			{
 				RTLIL::Wire *wire = it2.second;
 
@@ -165,45 +165,36 @@ struct IopadmapPass : public Pass {
 
 				RTLIL::Wire *new_wire = NULL;
 				if (!portname2.empty()) {
-					new_wire = new RTLIL::Wire;
-					*new_wire = *wire;
-					wire->name = NEW_ID;
-					module->wires[wire->name] = wire;
-					module->wires[new_wire->name] = new_wire;
+					new_wire = module->addWire(NEW_ID, wire);
+					module->swap_names(new_wire, wire);
 				}
 
 				if (flag_bits)
 				{
 					for (int i = 0; i < wire->width; i++)
 					{
-						RTLIL::Cell *cell = new RTLIL::Cell;
-						cell->name = NEW_ID;
-						cell->type = RTLIL::escape_id(celltype);
-						cell->connections[RTLIL::escape_id(portname)] = RTLIL::SigSpec(wire, 1, i);
+						RTLIL::Cell *cell = module->addCell(NEW_ID, RTLIL::escape_id(celltype));
+						cell->setPort(RTLIL::escape_id(portname), RTLIL::SigSpec(wire, i));
 						if (!portname2.empty())
-							cell->connections[RTLIL::escape_id(portname2)] = RTLIL::SigSpec(new_wire, 1, i);
+							cell->setPort(RTLIL::escape_id(portname2), RTLIL::SigSpec(new_wire, i));
 						if (!widthparam.empty())
 							cell->parameters[RTLIL::escape_id(widthparam)] = RTLIL::Const(1);
 						if (!nameparam.empty())
 							cell->parameters[RTLIL::escape_id(nameparam)] = RTLIL::Const(stringf("%s[%d]", RTLIL::id2cstr(wire->name), i));
 						cell->attributes["\\keep"] = RTLIL::Const(1);
-						module->add(cell);
 					}
 				}
 				else
 				{
-					RTLIL::Cell *cell = new RTLIL::Cell;
-					cell->name = NEW_ID;
-					cell->type = RTLIL::escape_id(celltype);
-					cell->connections[RTLIL::escape_id(portname)] = RTLIL::SigSpec(wire);
+					RTLIL::Cell *cell = module->addCell(NEW_ID, RTLIL::escape_id(celltype));
+					cell->setPort(RTLIL::escape_id(portname), RTLIL::SigSpec(wire));
 					if (!portname2.empty())
-						cell->connections[RTLIL::escape_id(portname2)] = RTLIL::SigSpec(new_wire);
+						cell->setPort(RTLIL::escape_id(portname2), RTLIL::SigSpec(new_wire));
 					if (!widthparam.empty())
 						cell->parameters[RTLIL::escape_id(widthparam)] = RTLIL::Const(wire->width);
 					if (!nameparam.empty())
 						cell->parameters[RTLIL::escape_id(nameparam)] = RTLIL::Const(RTLIL::id2cstr(wire->name));
 					cell->attributes["\\keep"] = RTLIL::Const(1);
-					module->add(cell);
 				}
 
 				wire->port_id = 0;

@@ -21,6 +21,7 @@
 #include "kernel/register.h"
 #include "kernel/log.h"
 
+YOSYS_NAMESPACE_BEGIN
 using namespace PASS_DFFLIBMAP;
 
 struct token_t {
@@ -45,58 +46,46 @@ static RTLIL::SigSpec parse_func_identifier(RTLIL::Module *module, const char *&
 		return *(expr++) == '0' ? RTLIL::State::S0 : RTLIL::State::S1;
 
 	std::string id = RTLIL::escape_id(std::string(expr, id_len));
-	if (!module->wires.count(id))
-		log_error("Can't resolve wire name %s.\n", RTLIL::id2cstr(id));
+	if (!module->wires_.count(id))
+		log_error("Can't resolve wire name %s.\n", RTLIL::unescape_id(id).c_str());
 
 	expr += id_len;
-	return module->wires.at(id);
+	return module->wires_.at(id);
 }
 
 static RTLIL::SigSpec create_inv_cell(RTLIL::Module *module, RTLIL::SigSpec A)
 {
-	RTLIL::Cell *cell = new RTLIL::Cell;
-	cell->name = NEW_ID;
-	cell->type = "$_INV_";
-	cell->connections["\\A"] = A;
-	cell->connections["\\Y"] = NEW_WIRE(module, 1);
-	module->add(cell);
-	return cell->connections["\\Y"];
+	RTLIL::Cell *cell = module->addCell(NEW_ID, "$_NOT_");
+	cell->setPort("\\A", A);
+	cell->setPort("\\Y", module->addWire(NEW_ID));
+	return cell->getPort("\\Y");
 }
 
 static RTLIL::SigSpec create_xor_cell(RTLIL::Module *module, RTLIL::SigSpec A, RTLIL::SigSpec B)
 {
-	RTLIL::Cell *cell = new RTLIL::Cell;
-	cell->name = NEW_ID;
-	cell->type = "$_XOR_";
-	cell->connections["\\A"] = A;
-	cell->connections["\\B"] = B;
-	cell->connections["\\Y"] = NEW_WIRE(module, 1);
-	module->add(cell);
-	return cell->connections["\\Y"];
+	RTLIL::Cell *cell = module->addCell(NEW_ID, "$_XOR_");
+	cell->setPort("\\A", A);
+	cell->setPort("\\B", B);
+	cell->setPort("\\Y", module->addWire(NEW_ID));
+	return cell->getPort("\\Y");
 }
 
 static RTLIL::SigSpec create_and_cell(RTLIL::Module *module, RTLIL::SigSpec A, RTLIL::SigSpec B)
 {
-	RTLIL::Cell *cell = new RTLIL::Cell;
-	cell->name = NEW_ID;
-	cell->type = "$_AND_";
-	cell->connections["\\A"] = A;
-	cell->connections["\\B"] = B;
-	cell->connections["\\Y"] = NEW_WIRE(module, 1);
-	module->add(cell);
-	return cell->connections["\\Y"];
+	RTLIL::Cell *cell = module->addCell(NEW_ID, "$_AND_");
+	cell->setPort("\\A", A);
+	cell->setPort("\\B", B);
+	cell->setPort("\\Y", module->addWire(NEW_ID));
+	return cell->getPort("\\Y");
 }
 
 static RTLIL::SigSpec create_or_cell(RTLIL::Module *module, RTLIL::SigSpec A, RTLIL::SigSpec B)
 {
-	RTLIL::Cell *cell = new RTLIL::Cell;
-	cell->name = NEW_ID;
-	cell->type = "$_OR_";
-	cell->connections["\\A"] = A;
-	cell->connections["\\B"] = B;
-	cell->connections["\\Y"] = NEW_WIRE(module, 1);
-	module->add(cell);
-	return cell->connections["\\Y"];
+	RTLIL::Cell *cell = module->addCell(NEW_ID, "$_OR_");
+	cell->setPort("\\A", A);
+	cell->setPort("\\B", B);
+	cell->setPort("\\Y", module->addWire(NEW_ID));
+	return cell->getPort("\\Y");
 }
 
 static bool parse_func_reduce(RTLIL::Module *module, std::vector<token_t> &stack, token_t next_token)
@@ -227,8 +216,8 @@ static RTLIL::SigSpec parse_func_expr(RTLIL::Module *module, const char *expr)
 
 static void create_ff(RTLIL::Module *module, LibertyAst *node)
 {
-	RTLIL::SigSpec iq_sig(module->new_wire(1, RTLIL::escape_id(node->args.at(0))));
-	RTLIL::SigSpec iqn_sig(module->new_wire(1, RTLIL::escape_id(node->args.at(1))));
+	RTLIL::SigSpec iq_sig(module->addWire(RTLIL::escape_id(node->args.at(0))));
+	RTLIL::SigSpec iqn_sig(module->addWire(RTLIL::escape_id(node->args.at(1))));
 
 	RTLIL::SigSpec clk_sig, data_sig, clear_sig, preset_sig;
 	bool clk_polarity = true, clear_polarity = true, preset_polarity = true;
@@ -244,64 +233,59 @@ static void create_ff(RTLIL::Module *module, LibertyAst *node)
 			preset_sig = parse_func_expr(module, child->value.c_str());
 	}
 
-	if (clk_sig.width == 0 || data_sig.width == 0)
-		log_error("FF cell %s has no next_state and/or clocked_on attribute.\n", RTLIL::id2cstr(module->name));
+	if (clk_sig.size() == 0 || data_sig.size() == 0)
+		log_error("FF cell %s has no next_state and/or clocked_on attribute.\n", log_id(module->name));
 
 	for (bool rerun_invert_rollback = true; rerun_invert_rollback;)
 	{
 		rerun_invert_rollback = false;
 
-		for (auto &it : module->cells) {
-			if (it.second->type == "$_INV_" && it.second->connections.at("\\Y") == clk_sig) {
-				clk_sig = it.second->connections.at("\\A");
+		for (auto &it : module->cells_) {
+			if (it.second->type == "$_NOT_" && it.second->getPort("\\Y") == clk_sig) {
+				clk_sig = it.second->getPort("\\A");
 				clk_polarity = !clk_polarity;
 				rerun_invert_rollback = true;
 			}
-			if (it.second->type == "$_INV_" && it.second->connections.at("\\Y") == clear_sig) {
-				clear_sig = it.second->connections.at("\\A");
+			if (it.second->type == "$_NOT_" && it.second->getPort("\\Y") == clear_sig) {
+				clear_sig = it.second->getPort("\\A");
 				clear_polarity = !clear_polarity;
 				rerun_invert_rollback = true;
 			}
-			if (it.second->type == "$_INV_" && it.second->connections.at("\\Y") == preset_sig) {
-				preset_sig = it.second->connections.at("\\A");
+			if (it.second->type == "$_NOT_" && it.second->getPort("\\Y") == preset_sig) {
+				preset_sig = it.second->getPort("\\A");
 				preset_polarity = !preset_polarity;
 				rerun_invert_rollback = true;
 			}
 		}
 	}
 
-	RTLIL::Cell *cell = new RTLIL::Cell;
-	cell->name = NEW_ID;
-	cell->type = "$_INV_";
-	cell->connections["\\A"] = iq_sig;
-	cell->connections["\\Y"] = iqn_sig;
-	module->add(cell);
+	RTLIL::Cell *cell = module->addCell(NEW_ID, "$_NOT_");
+	cell->setPort("\\A", iq_sig);
+	cell->setPort("\\Y", iqn_sig);
 
-	cell = new RTLIL::Cell;
-	cell->name = NEW_ID;
-	cell->connections["\\D"] = data_sig;
-	cell->connections["\\Q"] = iq_sig;
-	cell->connections["\\C"] = clk_sig;
-	module->add(cell);
+	cell = module->addCell(NEW_ID, "");
+	cell->setPort("\\D", data_sig);
+	cell->setPort("\\Q", iq_sig);
+	cell->setPort("\\C", clk_sig);
 
-	if (clear_sig.width == 0 && preset_sig.width == 0) {
+	if (clear_sig.size() == 0 && preset_sig.size() == 0) {
 		cell->type = stringf("$_DFF_%c_", clk_polarity ? 'P' : 'N');
 	}
 
-	if (clear_sig.width == 1 && preset_sig.width == 0) {
+	if (clear_sig.size() == 1 && preset_sig.size() == 0) {
 		cell->type = stringf("$_DFF_%c%c0_", clk_polarity ? 'P' : 'N', clear_polarity ? 'P' : 'N');
-		cell->connections["\\R"] = clear_sig;
+		cell->setPort("\\R", clear_sig);
 	}
 
-	if (clear_sig.width == 0 && preset_sig.width == 1) {
+	if (clear_sig.size() == 0 && preset_sig.size() == 1) {
 		cell->type = stringf("$_DFF_%c%c1_", clk_polarity ? 'P' : 'N', preset_polarity ? 'P' : 'N');
-		cell->connections["\\R"] = preset_sig;
+		cell->setPort("\\R", preset_sig);
 	}
 
-	if (clear_sig.width == 1 && preset_sig.width == 1) {
+	if (clear_sig.size() == 1 && preset_sig.size() == 1) {
 		cell->type = stringf("$_DFFSR_%c%c%c_", clk_polarity ? 'P' : 'N', preset_polarity ? 'P' : 'N', clear_polarity ? 'P' : 'N');
-		cell->connections["\\S"] = preset_sig;
-		cell->connections["\\R"] = clear_sig;
+		cell->setPort("\\S", preset_sig);
+		cell->setPort("\\R", clear_sig);
 	}
 
 	log_assert(!cell->type.empty());
@@ -309,8 +293,8 @@ static void create_ff(RTLIL::Module *module, LibertyAst *node)
 
 static void create_latch(RTLIL::Module *module, LibertyAst *node)
 {
-	RTLIL::SigSpec iq_sig(module->new_wire(1, RTLIL::escape_id(node->args.at(0))));
-	RTLIL::SigSpec iqn_sig(module->new_wire(1, RTLIL::escape_id(node->args.at(1))));
+	RTLIL::SigSpec iq_sig(module->addWire(RTLIL::escape_id(node->args.at(0))));
+	RTLIL::SigSpec iqn_sig(module->addWire(RTLIL::escape_id(node->args.at(1))));
 
 	RTLIL::SigSpec enable_sig, data_sig, clear_sig, preset_sig;
 	bool enable_polarity = true, clear_polarity = true, preset_polarity = true;
@@ -326,120 +310,96 @@ static void create_latch(RTLIL::Module *module, LibertyAst *node)
 			preset_sig = parse_func_expr(module, child->value.c_str());
 	}
 
-	if (enable_sig.width == 0 || data_sig.width == 0)
-		log_error("Latch cell %s has no data_in and/or enable attribute.\n", RTLIL::id2cstr(module->name));
+	if (enable_sig.size() == 0 || data_sig.size() == 0)
+		log_error("Latch cell %s has no data_in and/or enable attribute.\n", log_id(module->name));
 
 	for (bool rerun_invert_rollback = true; rerun_invert_rollback;)
 	{
 		rerun_invert_rollback = false;
 
-		for (auto &it : module->cells) {
-			if (it.second->type == "$_INV_" && it.second->connections.at("\\Y") == enable_sig) {
-				enable_sig = it.second->connections.at("\\A");
+		for (auto &it : module->cells_) {
+			if (it.second->type == "$_NOT_" && it.second->getPort("\\Y") == enable_sig) {
+				enable_sig = it.second->getPort("\\A");
 				enable_polarity = !enable_polarity;
 				rerun_invert_rollback = true;
 			}
-			if (it.second->type == "$_INV_" && it.second->connections.at("\\Y") == clear_sig) {
-				clear_sig = it.second->connections.at("\\A");
+			if (it.second->type == "$_NOT_" && it.second->getPort("\\Y") == clear_sig) {
+				clear_sig = it.second->getPort("\\A");
 				clear_polarity = !clear_polarity;
 				rerun_invert_rollback = true;
 			}
-			if (it.second->type == "$_INV_" && it.second->connections.at("\\Y") == preset_sig) {
-				preset_sig = it.second->connections.at("\\A");
+			if (it.second->type == "$_NOT_" && it.second->getPort("\\Y") == preset_sig) {
+				preset_sig = it.second->getPort("\\A");
 				preset_polarity = !preset_polarity;
 				rerun_invert_rollback = true;
 			}
 		}
 	}
 
-	RTLIL::Cell *cell = new RTLIL::Cell;
-	cell->name = NEW_ID;
-	cell->type = "$_INV_";
-	cell->connections["\\A"] = iq_sig;
-	cell->connections["\\Y"] = iqn_sig;
-	module->add(cell);
+	RTLIL::Cell *cell = module->addCell(NEW_ID, "$_NOT_");
+	cell->setPort("\\A", iq_sig);
+	cell->setPort("\\Y", iqn_sig);
 
-	if (clear_sig.width == 1)
+	if (clear_sig.size() == 1)
 	{
 		RTLIL::SigSpec clear_negative = clear_sig;
 		RTLIL::SigSpec clear_enable = clear_sig;
 
 		if (clear_polarity == true || clear_polarity != enable_polarity)
 		{
-			RTLIL::Cell *inv = new RTLIL::Cell;
-			inv->name = NEW_ID;
-			inv->type = "$_INV_";
-			inv->connections["\\A"] = clear_sig;
-			inv->connections["\\Y"] = NEW_WIRE(module, 1);;
-			module->add(inv);
+			RTLIL::Cell *inv = module->addCell(NEW_ID, "$_NOT_");
+			inv->setPort("\\A", clear_sig);
+			inv->setPort("\\Y", module->addWire(NEW_ID));
 
 			if (clear_polarity == true)
-				clear_negative = inv->connections["\\Y"];
+				clear_negative = inv->getPort("\\Y");
 			if (clear_polarity != enable_polarity)
-				clear_enable = inv->connections["\\Y"];
+				clear_enable = inv->getPort("\\Y");
 		}
 
-		RTLIL::Cell *data_gate = new RTLIL::Cell;
-		data_gate->name = NEW_ID;
-		data_gate->type = "$_AND_";
-		data_gate->connections["\\A"] = data_sig;
-		data_gate->connections["\\B"] = clear_negative;
-		data_gate->connections["\\Y"] = data_sig = NEW_WIRE(module, 1);;
-		module->add(data_gate);
+		RTLIL::Cell *data_gate = module->addCell(NEW_ID, "$_AND_");
+		data_gate->setPort("\\A", data_sig);
+		data_gate->setPort("\\B", clear_negative);
+		data_gate->setPort("\\Y", data_sig = module->addWire(NEW_ID));
 
-		RTLIL::Cell *enable_gate = new RTLIL::Cell;
-		enable_gate->name = NEW_ID;
-		enable_gate->type = enable_polarity ? "$_OR_" : "$_AND_";
-		enable_gate->connections["\\A"] = enable_sig;
-		enable_gate->connections["\\B"] = clear_enable;
-		enable_gate->connections["\\Y"] = data_sig = NEW_WIRE(module, 1);;
-		module->add(enable_gate);
+		RTLIL::Cell *enable_gate = module->addCell(NEW_ID, enable_polarity ? "$_OR_" : "$_AND_");
+		enable_gate->setPort("\\A", enable_sig);
+		enable_gate->setPort("\\B", clear_enable);
+		enable_gate->setPort("\\Y", data_sig = module->addWire(NEW_ID));
 	}
 
-	if (preset_sig.width == 1)
+	if (preset_sig.size() == 1)
 	{
 		RTLIL::SigSpec preset_positive = preset_sig;
 		RTLIL::SigSpec preset_enable = preset_sig;
 
 		if (preset_polarity == false || preset_polarity != enable_polarity)
 		{
-			RTLIL::Cell *inv = new RTLIL::Cell;
-			inv->name = NEW_ID;
-			inv->type = "$_INV_";
-			inv->connections["\\A"] = preset_sig;
-			inv->connections["\\Y"] = NEW_WIRE(module, 1);;
-			module->add(inv);
+			RTLIL::Cell *inv = module->addCell(NEW_ID, "$_NOT_");
+			inv->setPort("\\A", preset_sig);
+			inv->setPort("\\Y", module->addWire(NEW_ID));
 
 			if (preset_polarity == false)
-				preset_positive = inv->connections["\\Y"];
+				preset_positive = inv->getPort("\\Y");
 			if (preset_polarity != enable_polarity)
-				preset_enable = inv->connections["\\Y"];
+				preset_enable = inv->getPort("\\Y");
 		}
 
-		RTLIL::Cell *data_gate = new RTLIL::Cell;
-		data_gate->name = NEW_ID;
-		data_gate->type = "$_OR_";
-		data_gate->connections["\\A"] = data_sig;
-		data_gate->connections["\\B"] = preset_positive;
-		data_gate->connections["\\Y"] = data_sig = NEW_WIRE(module, 1);;
-		module->add(data_gate);
+		RTLIL::Cell *data_gate = module->addCell(NEW_ID, "$_OR_");
+		data_gate->setPort("\\A", data_sig);
+		data_gate->setPort("\\B", preset_positive);
+		data_gate->setPort("\\Y", data_sig = module->addWire(NEW_ID));
 
-		RTLIL::Cell *enable_gate = new RTLIL::Cell;
-		enable_gate->name = NEW_ID;
-		enable_gate->type = enable_polarity ? "$_OR_" : "$_AND_";
-		enable_gate->connections["\\A"] = enable_sig;
-		enable_gate->connections["\\B"] = preset_enable;
-		enable_gate->connections["\\Y"] = data_sig = NEW_WIRE(module, 1);;
-		module->add(enable_gate);
+		RTLIL::Cell *enable_gate = module->addCell(NEW_ID, enable_polarity ? "$_OR_" : "$_AND_");
+		enable_gate->setPort("\\A", enable_sig);
+		enable_gate->setPort("\\B", preset_enable);
+		enable_gate->setPort("\\Y", data_sig = module->addWire(NEW_ID));
 	}
 
-	cell = new RTLIL::Cell;
-	cell->name = NEW_ID;
-	cell->type = stringf("$_DLATCH_%c_", enable_polarity ? 'P' : 'N');
-	cell->connections["\\D"] = data_sig;
-	cell->connections["\\Q"] = iq_sig;
-	cell->connections["\\E"] = enable_sig;
-	module->add(cell);
+	cell = module->addCell(NEW_ID, stringf("$_DLATCH_%c_", enable_polarity ? 'P' : 'N'));
+	cell->setPort("\\D", data_sig);
+	cell->setPort("\\Q", iq_sig);
+	cell->setPort("\\E", enable_sig);
 }
 
 struct LibertyFrontend : public Frontend {
@@ -470,7 +430,7 @@ struct LibertyFrontend : public Frontend {
 		log("        set the specified attribute (to the value 1) on all loaded modules\n");
 		log("\n");
 	}
-	virtual void execute(FILE *&f, std::string filename, std::vector<std::string> args, RTLIL::Design *design)
+	virtual void execute(std::istream *&f, std::string filename, std::vector<std::string> args, RTLIL::Design *design)
 	{
 		bool flag_lib = false;
 		bool flag_ignore_redef = false;
@@ -507,7 +467,7 @@ struct LibertyFrontend : public Frontend {
 		}
 		extra_args(f, filename, args, argidx);
 
-		LibertyParser parser(f);
+		LibertyParser parser(*f);
 		int cell_count = 0;
 
 		for (auto cell : parser.ast->children)
@@ -517,16 +477,19 @@ struct LibertyFrontend : public Frontend {
 
 			std::string cell_name = RTLIL::escape_id(cell->args.at(0));
 
-			if (design->modules.count(cell_name)) {
+			if (design->has(cell_name)) {
 				if (flag_ignore_redef)
 					continue;
-				log_error("Duplicate definition of cell/module %s.\n", RTLIL::id2cstr(cell_name));
+				log_error("Duplicate definition of cell/module %s.\n", RTLIL::unescape_id(cell_name).c_str());
 			}
 
-			// log("Processing cell type %s.\n", RTLIL::id2cstr(cell_name));
+			// log("Processing cell type %s.\n", RTLIL::unescape_id(cell_name).c_str());
 
 			RTLIL::Module *module = new RTLIL::Module;
 			module->name = cell_name;
+
+			if (flag_lib)
+				module->set_bool_attribute("\\blackbox");
 
 			for (auto &attr : attributes)
 				module->attributes[attr] = 1;
@@ -534,19 +497,19 @@ struct LibertyFrontend : public Frontend {
 			for (auto node : cell->children)
 				if (node->id == "pin" && node->args.size() == 1) {
 					LibertyAst *dir = node->find("direction");
-					if (!dir || (dir->value != "input" && dir->value != "output" && dir->value != "internal"))
+					if (!dir || (dir->value != "input" && dir->value != "output" && dir->value != "inout" && dir->value != "internal"))
 					{
 						if (!flag_ignore_miss_dir)
 						{
-							log_error("Missing or invalid dircetion for pin %s of cell %s.\n", node->args.at(0).c_str(), RTLIL::id2cstr(module->name));
+							log_error("Missing or invalid direction for pin %s of cell %s.\n", node->args.at(0).c_str(), log_id(module->name));
 						} else {
-							log("Ignoring cell %s with missing or invalid dircetion for pin %s.\n", RTLIL::id2cstr(module->name), node->args.at(0).c_str());
+							log("Ignoring cell %s with missing or invalid direction for pin %s.\n", log_id(module->name), node->args.at(0).c_str());
 							delete module;
 							goto skip_cell;
 						}
 					}
 					if (!flag_lib || dir->value != "internal")
-						module->new_wire(1, RTLIL::escape_id(node->args.at(0)));
+						module->addWire(RTLIL::escape_id(node->args.at(0)));
 				}
 
 			for (auto node : cell->children)
@@ -565,7 +528,12 @@ struct LibertyFrontend : public Frontend {
 					if (flag_lib && dir->value == "internal")
 						continue;
 
-					RTLIL::Wire *wire = module->wires.at(RTLIL::escape_id(node->args.at(0)));
+					RTLIL::Wire *wire = module->wires_.at(RTLIL::escape_id(node->args.at(0)));
+
+					if (dir && dir->value == "inout") {
+						wire->port_input = true;
+						wire->port_output = true;
+					}
 
 					if (dir && dir->value == "input") {
 						wire->port_input = true;
@@ -583,21 +551,21 @@ struct LibertyFrontend : public Frontend {
 					{
 						if (!flag_ignore_miss_func)
 						{
-							log_error("Missing function on output %s of cell %s.\n", RTLIL::id2cstr(wire->name), RTLIL::id2cstr(module->name));
+							log_error("Missing function on output %s of cell %s.\n", log_id(wire->name), log_id(module->name));
 						} else {
-							log("Ignoring cell %s with missing function on output %s.\n", RTLIL::id2cstr(module->name), RTLIL::id2cstr(wire->name));
+							log("Ignoring cell %s with missing function on output %s.\n", log_id(module->name), log_id(wire->name));
 							delete module;
 							goto skip_cell;
 						}
 					}
 
 					RTLIL::SigSpec out_sig = parse_func_expr(module, func->value.c_str());
-					module->connections.push_back(RTLIL::SigSig(wire, out_sig));
+					module->connect(RTLIL::SigSig(wire, out_sig));
 				}
 			}
 
 			module->fixup_ports();
-			design->modules[module->name] = module;
+			design->add(module);
 			cell_count++;
 skip_cell:;
 		}
@@ -605,4 +573,6 @@ skip_cell:;
 		log("Imported %d cell types from liberty file.\n", cell_count);
 	}
 } LibertyFrontend;
+
+YOSYS_NAMESPACE_END
 

@@ -94,19 +94,35 @@ struct SatHelper
 
 		RTLIL::SigSpec big_lhs, big_rhs;
 
-		for (auto &it : module->wires)
+		for (auto &it : module->wires_)
 		{
 			if (it.second->attributes.count("\\init") == 0)
 				continue;
 
 			RTLIL::SigSpec lhs = sigmap(it.second);
 			RTLIL::SigSpec rhs = it.second->attributes.at("\\init");
-			log_assert(lhs.width == rhs.width);
+			log_assert(lhs.size() == rhs.size());
 
-			log("Import set-constraint from init attribute: %s = %s\n", log_signal(lhs), log_signal(rhs));
-			big_lhs.remove2(lhs, &big_rhs);
-			big_lhs.append(lhs);
-			big_rhs.append(rhs);
+			RTLIL::SigSpec removed_bits;
+			for (int i = 0; i < lhs.size(); i++) {
+				RTLIL::SigSpec bit = lhs.extract(i, 1);
+				if (!satgen.initial_state.check_all(bit)) {
+					removed_bits.append(bit);
+					lhs.remove(i, 1);
+					rhs.remove(i, 1);
+					i--;
+				}
+			}
+
+			if (removed_bits.size())
+				log("Warning: ignoring initial value on non-register: %s\n", log_signal(removed_bits));
+
+			if (lhs.size()) {
+				log("Import set-constraint from init attribute: %s = %s\n", log_signal(lhs), log_signal(rhs));
+				big_lhs.remove2(lhs, &big_rhs);
+				big_lhs.append(lhs);
+				big_rhs.append(rhs);
+			}
 		}
 
 		for (auto &s : sets_init)
@@ -120,9 +136,9 @@ struct SatHelper
 			show_signal_pool.add(sigmap(lhs));
 			show_signal_pool.add(sigmap(rhs));
 
-			if (lhs.width != rhs.width)
+			if (lhs.size() != rhs.size())
 				log_cmd_error("Set expression with different lhs and rhs sizes: %s (%s, %d bits) vs. %s (%s, %d bits)\n",
-					s.first.c_str(), log_signal(lhs), lhs.width, s.second.c_str(), log_signal(rhs), rhs.width);
+					s.first.c_str(), log_signal(lhs), lhs.size(), s.second.c_str(), log_signal(rhs), rhs.size());
 
 			log("Import set-constraint: %s = %s\n", log_signal(lhs), log_signal(rhs));
 			big_lhs.remove2(lhs, &big_rhs);
@@ -132,7 +148,6 @@ struct SatHelper
 
 		if (!satgen.initial_state.check_all(big_lhs)) {
 			RTLIL::SigSpec rem = satgen.initial_state.remove(big_lhs);
-			rem.optimize();
 			log_cmd_error("Found -set-init bits that are not part of the initial_state: %s\n", log_signal(rem));
 		}
 
@@ -146,17 +161,17 @@ struct SatHelper
 			RTLIL::SigSpec rem = satgen.initial_state.export_all();
 			rem.remove(big_lhs);
 			big_lhs.append(rem);
-			big_rhs.append(RTLIL::SigSpec(RTLIL::State::Sx, rem.width));
+			big_rhs.append(RTLIL::SigSpec(RTLIL::State::Sx, rem.size()));
 		}
 
 		if (set_init_zero) {
 			RTLIL::SigSpec rem = satgen.initial_state.export_all();
 			rem.remove(big_lhs);
 			big_lhs.append(rem);
-			big_rhs.append(RTLIL::SigSpec(RTLIL::State::S0, rem.width));
+			big_rhs.append(RTLIL::SigSpec(RTLIL::State::S0, rem.size()));
 		}
 
-		if (big_lhs.width == 0) {
+		if (big_lhs.size() == 0) {
 			log("No constraints for initial state found.\n\n");
 			return;
 		}
@@ -189,9 +204,9 @@ struct SatHelper
 			show_signal_pool.add(sigmap(lhs));
 			show_signal_pool.add(sigmap(rhs));
 
-			if (lhs.width != rhs.width)
+			if (lhs.size() != rhs.size())
 				log_cmd_error("Set expression with different lhs and rhs sizes: %s (%s, %d bits) vs. %s (%s, %d bits)\n",
-					s.first.c_str(), log_signal(lhs), lhs.width, s.second.c_str(), log_signal(rhs), rhs.width);
+					s.first.c_str(), log_signal(lhs), lhs.size(), s.second.c_str(), log_signal(rhs), rhs.size());
 
 			log("Import set-constraint: %s = %s\n", log_signal(lhs), log_signal(rhs));
 			big_lhs.remove2(lhs, &big_rhs);
@@ -210,9 +225,9 @@ struct SatHelper
 			show_signal_pool.add(sigmap(lhs));
 			show_signal_pool.add(sigmap(rhs));
 
-			if (lhs.width != rhs.width)
+			if (lhs.size() != rhs.size())
 				log_cmd_error("Set expression with different lhs and rhs sizes: %s (%s, %d bits) vs. %s (%s, %d bits)\n",
-					s.first.c_str(), log_signal(lhs), lhs.width, s.second.c_str(), log_signal(rhs), rhs.width);
+					s.first.c_str(), log_signal(lhs), lhs.size(), s.second.c_str(), log_signal(rhs), rhs.size());
 
 			log("Import set-constraint for this timestep: %s = %s\n", log_signal(lhs), log_signal(rhs));
 			big_lhs.remove2(lhs, &big_rhs);
@@ -302,11 +317,11 @@ struct SatHelper
 		}
 
 		int import_cell_counter = 0;
-		for (auto &c : module->cells)
+		for (auto &c : module->cells_)
 			if (design->selected(module, c.second)) {
 				// log("Import cell: %s\n", RTLIL::id2cstr(c.first));
 				if (satgen.importCell(c.second, timestep)) {
-					for (auto &p : c.second->connections)
+					for (auto &p : c.second->connections())
 						if (ct.cell_output(c.second->type, p.first))
 							show_drivers.insert(sigmap(p.second), c.second);
 					import_cell_counter++;
@@ -320,7 +335,7 @@ struct SatHelper
 
 	int setup_proof(int timestep = -1)
 	{
-		assert(prove.size() || prove_x.size() || prove_asserts);
+		log_assert(prove.size() || prove_x.size() || prove_asserts);
 
 		RTLIL::SigSpec big_lhs, big_rhs;
 		std::vector<int> prove_bits;
@@ -338,9 +353,9 @@ struct SatHelper
 				show_signal_pool.add(sigmap(lhs));
 				show_signal_pool.add(sigmap(rhs));
 
-				if (lhs.width != rhs.width)
+				if (lhs.size() != rhs.size())
 					log_cmd_error("Proof expression with different lhs and rhs sizes: %s (%s, %d bits) vs. %s (%s, %d bits)\n",
-						s.first.c_str(), log_signal(lhs), lhs.width, s.second.c_str(), log_signal(rhs), rhs.width);
+						s.first.c_str(), log_signal(lhs), lhs.size(), s.second.c_str(), log_signal(rhs), rhs.size());
 
 				log("Import proof-constraint: %s = %s\n", log_signal(lhs), log_signal(rhs));
 				big_lhs.remove2(lhs, &big_rhs);
@@ -366,9 +381,9 @@ struct SatHelper
 				show_signal_pool.add(sigmap(lhs));
 				show_signal_pool.add(sigmap(rhs));
 
-				if (lhs.width != rhs.width)
+				if (lhs.size() != rhs.size())
 					log_cmd_error("Proof-x expression with different lhs and rhs sizes: %s (%s, %d bits) vs. %s (%s, %d bits)\n",
-						s.first.c_str(), log_signal(lhs), lhs.width, s.second.c_str(), log_signal(rhs), rhs.width);
+						s.first.c_str(), log_signal(lhs), lhs.size(), s.second.c_str(), log_signal(rhs), rhs.size());
 
 				log("Import proof-x-constraint: %s = %s\n", log_signal(lhs), log_signal(rhs));
 				big_lhs.remove2(lhs, &big_rhs);
@@ -391,10 +406,8 @@ struct SatHelper
 		if (prove_asserts) {
 			RTLIL::SigSpec asserts_a, asserts_en;
 			satgen.getAsserts(asserts_a, asserts_en, timestep);
-			asserts_a.expand();
-			asserts_en.expand();
-			for (size_t i = 0; i < asserts_a.chunks.size(); i++)
-				log("Import proof for assert: %s when %s.\n", log_signal(asserts_a.chunks[i]), log_signal(asserts_en.chunks[i]));
+			for (int i = 0; i < SIZE(asserts_a); i++)
+				log("Import proof for assert: %s when %s.\n", log_signal(asserts_a[i]), log_signal(asserts_en[i]));
 			prove_bits.push_back(satgen.importAsserts(timestep));
 		}
 
@@ -492,7 +505,7 @@ struct SatHelper
 					final_signals.add(sig);
 				} else {
 					for (auto &d : drivers)
-					for (auto &p : d->connections) {
+					for (auto &p : d->connections()) {
 						if (d->type == "$dff" && p.first == "\\CLK")
 							continue;
 						if (d->type.substr(0, 6) == "$_DFF_" && p.first == "\\C")
@@ -523,12 +536,12 @@ struct SatHelper
 
 		std::vector<int> modelUndefExpressions;
 
-		for (auto &c : modelSig.chunks)
+		for (auto &c : modelSig.chunks())
 			if (c.wire != NULL)
 			{
 				ModelBlockInfo info;
 				RTLIL::SigSpec chunksig = c;
-				info.width = chunksig.width;
+				info.width = chunksig.size();
 				info.description = log_signal(chunksig);
 
 				for (int timestep = -1; timestep <= max_timestep; timestep++)
@@ -553,7 +566,7 @@ struct SatHelper
 		// Add initial state signals as collected by satgen
 		//
 		modelSig = satgen.initial_state.export_all();
-		for (auto &c : modelSig.chunks)
+		for (auto &c : modelSig.chunks())
 			if (c.wire != NULL)
 			{
 				ModelBlockInfo info;
@@ -561,7 +574,7 @@ struct SatHelper
 
 				info.timestep = 0;
 				info.offset = modelExpressions.size();
-				info.width = chunksig.width;
+				info.width = chunksig.size();
 				info.description = log_signal(chunksig);
 				modelInfo.insert(info);
 
@@ -904,6 +917,9 @@ struct SatPass : public Pass {
 		log("    -prove-asserts\n");
 		log("        Prove that all asserts in the design hold.\n");
 		log("\n");
+		log("    -prove-skip <N>\n");
+		log("        Do not enforce the prove-condition for the first <N> time steps.\n");
+		log("\n");
 		log("    -maxsteps <N>\n");
 		log("        Set a maximum length for the induction.\n");
 		log("\n");
@@ -932,7 +948,7 @@ struct SatPass : public Pass {
 		std::map<int, std::vector<std::pair<std::string, std::string>>> sets_at;
 		std::map<int, std::vector<std::string>> unsets_at, sets_def_at, sets_any_undef_at, sets_all_undef_at;
 		std::vector<std::string> shows, sets_def, sets_any_undef, sets_all_undef;
-		int loopcount = 0, seq_len = 0, maxsteps = 0, initsteps = 0, timeout = 0;
+		int loopcount = 0, seq_len = 0, maxsteps = 0, initsteps = 0, timeout = 0, prove_skip = 0;
 		bool verify = false, fail_on_timeout = false, enable_undef = false, set_def_inputs = false;
 		bool ignore_div_by_zero = false, set_init_undef = false, set_init_zero = false, max_undef = false;
 		bool tempinduct = false, prove_asserts = false, show_inputs = false, show_outputs = false;
@@ -1046,6 +1062,10 @@ struct SatPass : public Pass {
 				prove_asserts = true;
 				continue;
 			}
+			if (args[argidx] == "-prove-skip" && argidx+1 < args.size()) {
+				prove_skip = atoi(args[++argidx].c_str());
+				continue;
+			}
 			if (args[argidx] == "-seq" && argidx+1 < args.size()) {
 				seq_len = atoi(args[++argidx].c_str());
 				continue;
@@ -1128,7 +1148,7 @@ struct SatPass : public Pass {
 		extra_args(args, argidx, design);
 
 		RTLIL::Module *module = NULL;
-		for (auto &mod_it : design->modules)
+		for (auto &mod_it : design->modules_)
 			if (design->selected(mod_it.second)) {
 				if (module)
 					log_cmd_error("Only one module must be selected for the SAT pass! (selected: %s and %s)\n",
@@ -1141,25 +1161,31 @@ struct SatPass : public Pass {
 		if (!prove.size() && !prove_x.size() && !prove_asserts && tempinduct)
 			log_cmd_error("Got -tempinduct but nothing to prove!\n");
 
+		if (prove_skip && tempinduct)
+			log_cmd_error("Options -prove-skip and -tempinduct don't work with each other.\n");
+
+		if (prove_skip >= seq_len && prove_skip > 0)
+			log_cmd_error("The value of -prove-skip must be smaller than the one of -seq.\n");
+
 		if (set_init_undef + set_init_zero + set_init_def > 1)
 			log_cmd_error("The options -set-init-undef, -set-init-def, and -set-init-zero are exclusive!\n");
 
 		if (set_def_inputs) {
-			for (auto &it : module->wires)
+			for (auto &it : module->wires_)
 				if (it.second->port_input)
-					sets_def.push_back(it.second->name);
+					sets_def.push_back(it.second->name.str());
 		}
 
 		if (show_inputs) {
-			for (auto &it : module->wires)
+			for (auto &it : module->wires_)
 				if (it.second->port_input)
-					shows.push_back(it.second->name);
+					shows.push_back(it.second->name.str());
 		}
 
 		if (show_outputs) {
-			for (auto &it : module->wires)
+			for (auto &it : module->wires_)
 				if (it.second->port_output)
-					shows.push_back(it.second->name);
+					shows.push_back(it.second->name.str());
 		}
 
 		if (tempinduct)
@@ -1294,6 +1320,8 @@ struct SatPass : public Pass {
 			}
 
 			log("\nReached maximum number of time steps -> proof failed.\n");
+			if(!vcd_file_name.empty())
+				inductstep.dump_model_to_vcd(vcd_file_name);
 			print_proof_failed();
 
 		tip_failed:
@@ -1346,7 +1374,8 @@ struct SatPass : public Pass {
 				for (int timestep = 1; timestep <= seq_len; timestep++) {
 					sathelper.setup(timestep);
 					if (sathelper.prove.size() || sathelper.prove_x.size() || sathelper.prove_asserts)
-						prove_bits.push_back(sathelper.setup_proof(timestep));
+						if (timestep > prove_skip)
+							prove_bits.push_back(sathelper.setup_proof(timestep));
 				}
 				if (sathelper.prove.size() || sathelper.prove_x.size() || sathelper.prove_asserts)
 					sathelper.ez.assume(sathelper.ez.NOT(sathelper.ez.expression(ezSAT::OpAnd, prove_bits)));

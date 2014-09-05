@@ -30,6 +30,11 @@ const int ezSAT::FALSE = 2;
 
 ezSAT::ezSAT()
 {
+	flag_keep_cnf = false;
+	flag_non_incremental = false;
+
+	non_incremental_solve_used_up = false;
+
 	cnfConsumed = false;
 	cnfVariableCount = 0;
 	cnfClausesCount = 0;
@@ -588,19 +593,40 @@ int ezSAT::bind(int id, bool auto_freeze)
 
 void ezSAT::consumeCnf()
 {
-	cnfConsumed = true;
+	if (mode_keep_cnf())
+		cnfClausesBackup.insert(cnfClausesBackup.end(), cnfClauses.begin(), cnfClauses.end());
+	else
+		cnfConsumed = true;
 	cnfClauses.clear();
 }
 
 void ezSAT::consumeCnf(std::vector<std::vector<int>> &cnf)
 {
-	cnfConsumed = true;
+	if (mode_keep_cnf())
+		cnfClausesBackup.insert(cnfClausesBackup.end(), cnfClauses.begin(), cnfClauses.end());
+	else
+		cnfConsumed = true;
 	cnf.swap(cnfClauses);
 	cnfClauses.clear();
 }
 
+void ezSAT::getFullCnf(std::vector<std::vector<int>> &full_cnf) const
+{
+	assert(full_cnf.empty());
+	full_cnf.insert(full_cnf.end(), cnfClausesBackup.begin(), cnfClausesBackup.end());
+	full_cnf.insert(full_cnf.end(), cnfClauses.begin(), cnfClauses.end());
+}
+
+void ezSAT::preSolverCallback()
+{
+	assert(!non_incremental_solve_used_up);
+	if (mode_non_incremental())
+		non_incremental_solve_used_up = true;
+}
+
 bool ezSAT::solver(const std::vector<int>&, std::vector<bool>&, const std::vector<int>&)
 {
+	preSolverCallback();
 	fprintf(stderr, "************************************************************************\n");
 	fprintf(stderr, "ERROR: You are trying to use the solve() method of the ezSAT base class!\n");
 	fprintf(stderr, "Use a dervied class like ezMiniSAT instead.\n");
@@ -951,6 +977,96 @@ std::vector<int> ezSAT::vec_srl(const std::vector<int> &vec1, int shift)
 	return vec;
 }
 
+std::vector<int> ezSAT::vec_shift(const std::vector<int> &vec1, int shift, int extend_left, int extend_right)
+{
+	std::vector<int> vec;
+	for (int i = 0; i < int(vec1.size()); i++) {
+		int j = i+shift;
+		if (j < 0)
+			vec.push_back(extend_right);
+		else if (j >= int(vec1.size()))
+			vec.push_back(extend_left);
+		else
+			vec.push_back(vec1[j]);
+	}
+	return vec;
+}
+
+static int my_clog2(int x)
+{
+	int result = 0;
+	for (x--; x > 0; result++)
+		x >>= 1;
+	return result;
+}
+
+std::vector<int> ezSAT::vec_shift_right(const std::vector<int> &vec1, const std::vector<int> &vec2, bool vec2_signed, int extend_left, int extend_right)
+{
+	int vec2_bits = std::min(my_clog2(vec1.size()) + (vec2_signed ? 1 : 0), int(vec2.size()));
+
+	std::vector<int> overflow_bits(vec2.begin() + vec2_bits, vec2.end());
+	int overflow_left = FALSE, overflow_right = FALSE;
+
+	if (vec2_signed) {
+		int overflow = FALSE;
+		for (auto bit : overflow_bits)
+			overflow = OR(overflow, XOR(bit, vec2[vec2_bits-1]));
+		overflow_left = AND(overflow, NOT(vec2.back()));
+		overflow_right = AND(overflow, vec2.back());
+	} else
+		overflow_left = vec_reduce_or(overflow_bits);
+
+	std::vector<int> buffer = vec1;
+
+	if (vec2_signed)
+		while (buffer.size() < vec1.size() + (1 << vec2_bits))
+			buffer.push_back(extend_left);
+
+	std::vector<int> overflow_pattern_left(buffer.size(), extend_left);
+	std::vector<int> overflow_pattern_right(buffer.size(), extend_right);
+
+	buffer = vec_ite(overflow_left, overflow_pattern_left, buffer);
+
+	if (vec2_signed)
+		buffer = vec_ite(overflow_right, overflow_pattern_left, buffer);
+
+	for (int i = vec2_bits-1; i >= 0; i--) {
+		std::vector<int> shifted_buffer;
+		if (vec2_signed && i == vec2_bits-1)
+			shifted_buffer = vec_shift(buffer, -(1 << i), extend_left, extend_right);
+		else
+			shifted_buffer = vec_shift(buffer, 1 << i, extend_left, extend_right);
+		buffer = vec_ite(vec2[i], shifted_buffer, buffer);
+	}
+
+	buffer.resize(vec1.size());
+	return buffer;
+}
+
+std::vector<int> ezSAT::vec_shift_left(const std::vector<int> &vec1, const std::vector<int> &vec2, bool vec2_signed, int extend_left, int extend_right)
+{
+	// vec2_signed is not implemented in vec_shift_left() yet
+	assert(vec2_signed == false);
+
+	int vec2_bits = std::min(my_clog2(vec1.size()), int(vec2.size()));
+
+	std::vector<int> overflow_bits(vec2.begin() + vec2_bits, vec2.end());
+	int overflow = vec_reduce_or(overflow_bits);
+
+	std::vector<int> buffer = vec1;
+	std::vector<int> overflow_pattern_right(buffer.size(), extend_right);
+	buffer = vec_ite(overflow, overflow_pattern_right, buffer);
+
+	for (int i = 0; i < vec2_bits; i++) {
+		std::vector<int> shifted_buffer;
+		shifted_buffer = vec_shift(buffer, -(1 << i), extend_left, extend_right);
+		buffer = vec_ite(vec2[i], shifted_buffer, buffer);
+	}
+
+	buffer.resize(vec1.size());
+	return buffer;
+}
+
 void ezSAT::vec_append(std::vector<int> &vec, const std::vector<int> &vec1) const
 {
 	for (auto bit : vec1)
@@ -1081,16 +1197,26 @@ void ezSAT::printDIMACS(FILE *f, bool verbose) const
 			if (cnfExpressionVariables[i] != 0)
 				fprintf(f, "c %*d: %s\n", digits, cnfExpressionVariables[i], to_string(-i-1).c_str());
 
+		if (mode_keep_cnf()) {
+			fprintf(f, "c\n");
+			fprintf(f, "c %d clauses from backup, %d from current buffer\n",
+					int(cnfClausesBackup.size()), int(cnfClauses.size()));
+		}
+
 		fprintf(f, "c\n");
 	}
 
-	fprintf(f, "p cnf %d %d\n", cnfVariableCount, int(cnfClauses.size()));
+	std::vector<std::vector<int>> all_clauses;
+	getFullCnf(all_clauses);
+	assert(cnfClausesCount == int(all_clauses.size()));
+
+	fprintf(f, "p cnf %d %d\n", cnfVariableCount, cnfClausesCount);
 	int maxClauseLen = 0;
-	for (auto &clause : cnfClauses)
+	for (auto &clause : all_clauses)
 		maxClauseLen = std::max(int(clause.size()), maxClauseLen);
 	if (!verbose)
 		maxClauseLen = std::min(maxClauseLen, 3);
-	for (auto &clause : cnfClauses) {
+	for (auto &clause : all_clauses) {
 		for (auto idx : clause)
 			fprintf(f, " %*d", digits, idx);
 		if (maxClauseLen >= int(clause.size()))

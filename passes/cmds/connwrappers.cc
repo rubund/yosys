@@ -30,8 +30,8 @@ struct ConnwrappersWorker
 		bool is_signed;
 	};
 
-	std::set<std::string> decl_celltypes;
-	std::map<std::pair<std::string, std::string>, portdecl_t> decls;
+	std::set<RTLIL::IdString> decl_celltypes;
+	std::map<std::pair<RTLIL::IdString, RTLIL::IdString>, portdecl_t> decls;
 
 	void add_port(std::string celltype, std::string portname, std::string widthparam, std::string signparam)
 	{
@@ -67,16 +67,16 @@ struct ConnwrappersWorker
 		std::map<RTLIL::SigBit, std::pair<bool, RTLIL::SigSpec>> extend_map;
 		SigMap sigmap(module);
 
-		for (auto &it : module->cells)
+		for (auto &it : module->cells_)
 		{
 			RTLIL::Cell *cell = it.second;
 
 			if (!decl_celltypes.count(cell->type))
 				continue;
 
-			for (auto &conn : cell->connections)
+			for (auto &conn : cell->connections())
 			{
-				std::pair<std::string, std::string> key(cell->type, conn.first);
+				std::pair<RTLIL::IdString, RTLIL::IdString> key(cell->type, conn.first);
 
 				if (!decls.count(key))
 					continue;
@@ -90,7 +90,7 @@ struct ConnwrappersWorker
 					continue;
 
 				int inner_width = cell->parameters.at(decl.widthparam).as_int();
-				int outer_width = conn.second.width;
+				int outer_width = conn.second.size();
 				bool is_signed = decl.signparam.empty() ? decl.is_signed : cell->parameters.at(decl.signparam).as_bool();
 
 				if (inner_width >= outer_width)
@@ -102,14 +102,14 @@ struct ConnwrappersWorker
 			}
 		}
 
-		for (auto &it : module->cells)
+		for (auto &it : module->cells_)
 		{
 			RTLIL::Cell *cell = it.second;
 
 			if (!design->selected(module, cell))
 				continue;
 
-			for (auto &conn : cell->connections)
+			for (auto &conn : cell->connections_)
 			{
 				std::vector<RTLIL::SigBit> sigbits = sigmap(conn.second).to_sigbit_vector();
 				RTLIL::SigSpec old_sig;
@@ -124,20 +124,20 @@ struct ConnwrappersWorker
 
 					int extend_width = 0;
 					RTLIL::SigBit extend_bit = is_signed ? sigbits[i] : RTLIL::SigBit(RTLIL::State::S0);
-					while (extend_width < extend_sig.width && i + extend_width + 1 < sigbits.size() &&
+					while (extend_width < extend_sig.size() && i + extend_width + 1 < sigbits.size() &&
 							sigbits[i + extend_width + 1] == extend_bit) extend_width++;
 
 					if (extend_width == 0)
 						continue;
 
-					if (old_sig.width == 0)
+					if (old_sig.size() == 0)
 						old_sig = conn.second;
 
 					conn.second.replace(i+1, extend_sig.extract(0, extend_width));
 					i += extend_width;
 				}
 
-				if (old_sig.width)
+				if (old_sig.size())
 					log("Connected extended bits of %s.%s:%s: %s -> %s\n", RTLIL::id2cstr(module->name), RTLIL::id2cstr(cell->name),
 							RTLIL::id2cstr(conn.first), log_signal(old_sig), log_signal(conn.second));
 			}
@@ -197,7 +197,7 @@ struct ConnwrappersPass : public Pass {
 
 		log_header("Executing CONNWRAPPERS pass (connect extended ports of wrapper cells).\n");
 
-		for (auto &mod_it : design->modules)
+		for (auto &mod_it : design->modules_)
 			if (design->selected(mod_it.second))
 				worker.work(design, mod_it.second);
 	}
