@@ -28,6 +28,21 @@ Copyright: Steve Reid <steve@edmweb.com>
            Volker Grabsch <vog@notjusthosting.com>
 License: Public Domain
 
+Files: manual/CHAPTER_StateOfTheArt/simlib_hana.v
+       tests/hana/hana_vlib.v
+Copyright: 2009-2010 Parvez Ahmad <parvez_ahmad@yahoo.co.uk>
+License: GPL-3+
+
+Files: passes/fsm/fsm_export.cc
+Copyright: 2012 Clifford Wolf <clifford@clifford.at>
+           2012 Martin Schmölzer <martin@schmoelzer.at>
+License: ISC License
+
+Files: tests/memories/amber23_sram_byte_en.v
+Copyright: 2010 Conor Santifort <csantifort.amber@gmail.com>
+           2010 OPENCORES.ORG
+License: LGPL-2+
+
 Files: debian/*
 Copyright: 2014 Ruben Undheim <ruben.undheim@gmail.com>
 License: GPL-2+
@@ -62,6 +77,24 @@ License: GPL-2+
  .
  On Debian systems, the complete text of the GNU General
  Public License version 2 can be found in "/usr/share/common-licenses/GPL-2".
+
+License: LGPL-2
+ This library is free software; you can redistribute it and/or
+ modify it under the terms of the GNU Lesser General Public
+ License as published by the Free Software Foundation; version 2.
+ .
+ This library is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU 
+ Lesser General Public License for more details.
+ .
+ You should have received a copy of the GNU Lesser General Public
+ License along with this library; if not, write to the 
+ Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ Boston, MA 02110-1301, USA.
+ .
+ On Debian Systems, the full text of the license can be found on
+ /usr/share/common-licenses/LGPL-2
 
 License: MIT
  Permission is hereby granted, free of charge, to any person obtaining a copy
