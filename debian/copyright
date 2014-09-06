@@ -3,7 +3,36 @@ Upstream-Name: yosys
 Source: http://www.clifford.at/yosys/
 
 Files: *
+Copyright: 2012-2014 Clifford Wolf <clifford@clifford.at>
+License: ISC License
+
+Files: backends/btor/btor.cc
 Copyright: 2012 Clifford Wolf <clifford@clifford.at>
+           2014 Ahmed Irfan <irfan@fbk.eu>
+License: ISC License
+
+Files: passes/cmds/tee.cc passes/tests/test_cell.cc passes/cmds/log.cc
+       passes/cmds/write_file.cc passes/cmds/trace.cc 
+Copyright: 2012-2014 Clifford Wolf <clifford@clifford.at>
+           2014 Johann Glaser <Johann.Glaser@gmx.at>
+License: ISC License
+
+Files: libs/minisat/*
+Copyright: 2003-2006, Niklas Een, Niklas Sorensson
+           2007-2010  Niklas Sorensson
+License: MIT
+
+Files: libs/sha1/*
+Copyright: Steve Reid <steve@edmweb.com>
+           Bruce Guenter <bruce@untroubled.org>
+           Volker Grabsch <vog@notjusthosting.com>
+License: Public Domain
+
+Files: debian/*
+Copyright: 2014 Ruben Undheim <ruben.undheim@gmail.com>
+License: GPL-2+
+
+
 License: ISC License 
  Permission to use, copy, modify, and/or distribute this software for any   
  purpose with or without fee is hereby granted, provided that the above     
@@ -17,3 +46,38 @@ License: ISC License
  ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF    
  OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.             
 
+License: GPL-2+
+ This package is free software; you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation; either version 2 of the License, or
+ (at your option) any later version.
+ .
+ This package is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+ .
+ You should have received a copy of the GNU General Public License
+ along with this program. If not, see <http://www.gnu.org/licenses/>
+ .
+ On Debian systems, the complete text of the GNU General
+ Public License version 2 can be found in "/usr/share/common-licenses/GPL-2".
+
+License: MIT
+ Permission is hereby granted, free of charge, to any person obtaining a copy
+ of this software and associated documentation files (the "Software"), to deal
+ in the Software without restriction, including without limitation the rights
+ to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ copies of the Software, and to permit persons to whom the Software is
+ furnished to do so, subject to the following conditions:
+ .
+ The above copyright notice and this permission notice shall be included in
+ all copies or substantial portions of the Software.
+ .
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ SOFTWARE.
