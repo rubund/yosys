@@ -27,6 +27,7 @@ Copyright: Steve Reid <steve@edmweb.com>
            Bruce Guenter <bruce@untroubled.org>
            Volker Grabsch <vog@notjusthosting.com>
 License: Public Domain
+ These files are in the public domain.
 
 Files: manual/CHAPTER_StateOfTheArt/simlib_hana.v
        tests/hana/hana_vlib.v
@@ -41,7 +42,7 @@ License: ISC License
 Files: tests/memories/amber23_sram_byte_en.v
 Copyright: 2010 Conor Santifort <csantifort.amber@gmail.com>
            2010 OPENCORES.ORG
-License: LGPL-2+
+License: LGPL-2.1+
 
 Files: debian/*
 Copyright: 2014 Ruben Undheim <ruben.undheim@gmail.com>
@@ -78,10 +79,28 @@ License: GPL-2+
  On Debian systems, the complete text of the GNU General
  Public License version 2 can be found in "/usr/share/common-licenses/GPL-2".
 
-License: LGPL-2
+License: GPL-3+
+ This program is free software: you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation; either version 3 of the License, or
+ (at your option) any later version.
+ .
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+ .
+ You should have received a copy of the GNU General Public License
+ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ .
+ On Debian systems, the complete text of the GNU General
+ Public License version 3 can be found in "/usr/share/common-licenses/GPL-3".
+
+License: LGPL-2.1+
  This library is free software; you can redistribute it and/or
  modify it under the terms of the GNU Lesser General Public
- License as published by the Free Software Foundation; version 2.
+ License as published by the Free Software Foundation; either version 2.1
+ og the License, or (at your option) any later version.
  .
  This library is distributed in the hope that it will be useful,
  but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -94,7 +113,7 @@ License: LGPL-2
  Boston, MA 02110-1301, USA.
  .
  On Debian Systems, the full text of the license can be found on
- /usr/share/common-licenses/LGPL-2
+ /usr/share/common-licenses/LGPL-2.1
 
 License: MIT
  Permission is hereby granted, free of charge, to any person obtaining a copy
