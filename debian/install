@@ -3,6 +3,7 @@ yosys-filterlib usr/bin
 yosys-config usr/bin
 share/simcells.v usr/share/yosys
 share/xilinx/cells.v usr/share/yosys/xilinx
+share/techmap.v usr/share/yosys
 share/simlib.v usr/share/yosys
 share/pmux2mux.v usr/share/yosys
 share/blackbox.v usr/share/yosys
