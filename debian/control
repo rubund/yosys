@@ -13,5 +13,11 @@ Package: yosys
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}, iverilog, graphviz, xdot
 Recommends: abc
-Description: Open source synthesis of digital circuits
- yosys is a complete package for the synthesis from RTL to gate-level logic.
+Description: Yosys Open SYnthesis Suite
+ Yosys is a framework for Verilog RTL synthesis. It currently has extensive
+ Verilog-2005 support and provides a basic set of synthesis algorithms for
+ various application domains.
+ .
+ Yosys can be adapted to perform any synthesis job by combining the existing
+ passes (algorithms) using synthesis scripts and adding additional passes as
+ needed by extending the yosys C++ code base.
