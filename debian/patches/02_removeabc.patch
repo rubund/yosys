@@ -1,3 +1,7 @@
+Description: Don't build abc when building yosys.
+  It is built as a separate source package.
+Forwarded: doesn't make sense upstream
+Author: Ruben Undheim <ruben.undheim@gmail.com>
 Index: yosys/Makefile
 ===================================================================
 --- yosys.orig/Makefile	2014-09-05 22:17:14.586545422 +0200

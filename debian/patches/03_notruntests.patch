@@ -1,3 +1,7 @@
+Description: Do not run the long test suite when
+  building for debian.
+Forwarded: doesn't make sense upstream
+Author: Ruben Undheim <ruben.undheim@gmail.com>
 Index: yosys/Makefile
 ===================================================================
 --- yosys.orig/Makefile	2014-09-05 22:18:08.594546002 +0200

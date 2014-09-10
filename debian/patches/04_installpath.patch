@@ -1,3 +1,8 @@
+Description: Some trouble with the install target in the
+  Makefile. debian/install takes care of the correct installation.
+  This patch simply removes the install target.
+Forwarded: doesn't make sense upstream
+Author: Ruben Undheim <ruben.undheim@gmail.com>
 Index: yosys/Makefile
 ===================================================================
 --- yosys.orig/Makefile	2014-09-05 22:19:51.746547108 +0200
