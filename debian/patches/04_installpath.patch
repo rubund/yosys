@@ -4,8 +4,8 @@ Forwarded: doesn't make sense upstream
 Author: Ruben Undheim <ruben.undheim@gmail.com>
 Index: yosys/Makefile
 ===================================================================
---- yosys.orig/Makefile	2014-09-14 09:31:33.000000000 +0200
-+++ yosys/Makefile	2014-09-14 09:32:14.370546709 +0200
+--- yosys.orig/Makefile	2014-09-14 10:15:11.298574348 +0200
++++ yosys/Makefile	2014-09-14 10:15:33.618574588 +0200
 @@ -14,7 +14,7 @@
  # other configuration flags
  ENABLE_GPROF := 0
@@ -15,3 +15,18 @@ Index: yosys/Makefile
  INSTALL_SUDO :=
  
  OBJS =
+@@ -263,10 +263,10 @@
+ 	@echo ""
+ 
+ install: $(TARGETS) $(EXTRA_TARGETS)
+-	$(INSTALL_SUDO) mkdir -p $(DESTDIR)/bin
+-	$(INSTALL_SUDO) install $(TARGETS) $(DESTDIR)/bin/
+-	$(INSTALL_SUDO) mkdir -p $(DESTDIR)/share/yosys
+-	$(INSTALL_SUDO) cp -r share/. $(DESTDIR)/share/yosys/.
++	$(INSTALL_SUDO) mkdir -p $(DESTDIR)/usr/bin
++	$(INSTALL_SUDO) install $(TARGETS) $(DESTDIR)/usr/bin/
++	$(INSTALL_SUDO) mkdir -p $(DESTDIR)/usr/share/yosys
++	$(INSTALL_SUDO) cp -r share/. $(DESTDIR)/usr/share/yosys/.
+ 
+ manual: $(TARGETS) $(EXTRA_TARGETS)
+ 	cd manual && bash appnotes.sh
