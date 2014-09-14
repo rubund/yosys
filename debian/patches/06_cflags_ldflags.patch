@@ -4,8 +4,8 @@ Forwarded: will do
 Author: Ruben Undheim <ruben.undheim@gmail.com>
 Index: yosys/Makefile
 ===================================================================
---- yosys.orig/Makefile	2014-09-14 12:27:43.000000000 +0200
-+++ yosys/Makefile	2014-09-14 12:28:36.066660204 +0200
+--- yosys.orig/Makefile	2014-09-14 12:45:33.658671118 +0200
++++ yosys/Makefile	2014-09-14 12:46:06.098671466 +0200
 @@ -27,8 +27,8 @@
  
  all: top-all
@@ -30,3 +30,12 @@ Index: yosys/Makefile
  
  kernel/version_$(GIT_REV).cc: Makefile
  	$(P) rm -f kernel/version_*.o kernel/version_*.d kernel/version_*.cc
+@@ -206,7 +206,7 @@
+ 			$(CXX) --version | tr ' ()' '\n' | grep '^[0-9]' | head -n1` $(filter -f% -m% -O% -DNDEBUG,$(CXXFLAGS)))\";" > kernel/version_$(GIT_REV).cc
+ 
+ yosys-config: yosys-config.in
+-	$(P) $(SED) -e 's,@CXX@,$(CXX),;' -e 's,@CXXFLAGS@,$(CXXFLAGS),;' -e 's,@LDFLAGS@,$(LDFLAGS),;' -e 's,@LDLIBS@,$(LDLIBS),;' \
++	$(P) $(SED) -e 's,@CXX@,$(CXX),;' -e 's/@CXXFLAGS@/$(CXXFLAGS)/;' -e 's/@LDFLAGS@/$(LDFLAGS)/;' -e 's,@LDLIBS@,$(LDLIBS),;' \
+ 			-e 's,@BINDIR@,$(DESTDIR)/bin,;' -e 's,@DATDIR@,$(DESTDIR)/share/yosys,;' < yosys-config.in > yosys-config
+ 	$(Q) chmod +x yosys-config
+ 
