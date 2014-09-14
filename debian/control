@@ -11,8 +11,8 @@ Homepage: http://www.clifford.at/yosys
 
 Package: yosys
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, iverilog, graphviz, xdot
-Recommends: abc
+Depends: ${shlibs:Depends}, ${misc:Depends}, iverilog, graphviz, xdot,
+         berkeley-abc
 Description: Yosys Open SYnthesis Suite
  Yosys is a framework for Verilog RTL synthesis. It currently has extensive
  Verilog-2005 support and provides a basic set of synthesis algorithms for
