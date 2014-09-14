@@ -1,26 +1,17 @@
-Description: Some trouble with the install target in the
-  Makefile. debian/install takes care of the correct installation.
-  This patch simply removes the install target.
+Description: This makes sure that DESTDIR
+  is not overwritten in the Makefile.
 Forwarded: doesn't make sense upstream
 Author: Ruben Undheim <ruben.undheim@gmail.com>
 Index: yosys/Makefile
 ===================================================================
---- yosys.orig/Makefile	2014-09-05 22:19:51.746547108 +0200
-+++ yosys/Makefile	2014-09-05 22:20:14.654547354 +0200
-@@ -262,11 +262,11 @@
- 	@echo "  Passed \"make vloghtb\"."
- 	@echo ""
+--- yosys.orig/Makefile	2014-09-14 09:31:33.000000000 +0200
++++ yosys/Makefile	2014-09-14 09:32:14.370546709 +0200
+@@ -14,7 +14,7 @@
+ # other configuration flags
+ ENABLE_GPROF := 0
  
--install: $(TARGETS) $(EXTRA_TARGETS)
--	$(INSTALL_SUDO) mkdir -p $(DESTDIR)/bin
--	$(INSTALL_SUDO) install $(TARGETS) $(DESTDIR)/bin/
--	$(INSTALL_SUDO) mkdir -p $(DESTDIR)/share/yosys
--	$(INSTALL_SUDO) cp -r share/. $(DESTDIR)/share/yosys/.
-+#install: $(TARGETS) $(EXTRA_TARGETS)
-+#	$(INSTALL_SUDO) mkdir -p $(DESTDIR)/bin
-+#	$(INSTALL_SUDO) install $(TARGETS) $(DESTDIR)/bin/
-+#	$(INSTALL_SUDO) mkdir -p $(DESTDIR)/share/yosys
-+#	$(INSTALL_SUDO) cp -r share/. $(DESTDIR)/share/yosys/.
+-DESTDIR := /usr/local
++#DESTDIR := /usr/local
+ INSTALL_SUDO :=
  
- manual: $(TARGETS) $(EXTRA_TARGETS)
- 	cd manual && bash appnotes.sh
+ OBJS =
