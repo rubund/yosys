@@ -1,3 +1,9 @@
+Description: The dependency abc is built with the name yosys-abc
+  upstream. Since it is available as a separate package independently
+  of yosys, it is not called yosys-abc in debian.
+  This patch changes the name of the command that yosys looks for.
+Forwarded: doesn't make sense upstream
+Author: Ruben Undheim <ruben.undheim@gmail.com>
 Index: yosys/passes/abc/abc.cc
 ===================================================================
 --- yosys.orig/passes/abc/abc.cc	2014-09-05 22:04:33.726537262 +0200
@@ -7,7 +13,7 @@ Index: yosys/passes/abc/abc.cc
  		log_push();
  
 -		std::string exe_file = proc_self_dirname() + "yosys-abc";
-+		std::string exe_file = proc_self_dirname() + "abc";
++		std::string exe_file = proc_self_dirname() + "berkeley-abc";
  		std::string script_file, liberty_file, constr_file, clk_str, delay_target;
  		bool dff_mode = false, keepff = false, cleanup = true;
  		int lut_mode = 0;

@@ -4,18 +4,18 @@ Source: http://www.clifford.at/yosys/
 
 Files: *
 Copyright: 2012-2014 Clifford Wolf <clifford@clifford.at>
-License: ISC License
+License: ISC
 
 Files: backends/btor/btor.cc
 Copyright: 2012 Clifford Wolf <clifford@clifford.at>
            2014 Ahmed Irfan <irfan@fbk.eu>
-License: ISC License
+License: ISC
 
 Files: passes/cmds/tee.cc passes/tests/test_cell.cc passes/cmds/log.cc
        passes/cmds/write_file.cc passes/cmds/trace.cc 
 Copyright: 2012-2014 Clifford Wolf <clifford@clifford.at>
            2014 Johann Glaser <Johann.Glaser@gmx.at>
-License: ISC License
+License: ISC
 
 Files: libs/minisat/*
 Copyright: 2003-2006, Niklas Een, Niklas Sorensson
@@ -26,7 +26,7 @@ Files: libs/sha1/*
 Copyright: Steve Reid <steve@edmweb.com>
            Bruce Guenter <bruce@untroubled.org>
            Volker Grabsch <vog@notjusthosting.com>
-License: Public Domain
+License: Public-Domain
  These files are in the public domain.
 
 Files: manual/CHAPTER_StateOfTheArt/simlib_hana.v
@@ -37,7 +37,7 @@ License: GPL-3+
 Files: passes/fsm/fsm_export.cc
 Copyright: 2012 Clifford Wolf <clifford@clifford.at>
            2012 Martin Schmölzer <martin@schmoelzer.at>
-License: ISC License
+License: ISC
 
 Files: tests/memories/amber23_sram_byte_en.v
 Copyright: 2010 Conor Santifort <csantifort.amber@gmail.com>
@@ -49,7 +49,7 @@ Copyright: 2014 Ruben Undheim <ruben.undheim@gmail.com>
 License: GPL-2+
 
 
-License: ISC License 
+License: ISC
  Permission to use, copy, modify, and/or distribute this software for any   
  purpose with or without fee is hereby granted, provided that the above     
  copyright notice and this permission notice appear in all copies.          

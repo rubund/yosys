@@ -1,3 +1,10 @@
+Description: Compilation from the upstream code depends on being in
+  the git repository to get the correct git-revision to be shown when
+  running the program. This patch puts in the git revision from the
+  correct upstream.
+  It must be updated every time upstream changes!
+Forwarded: doesn't make sense upstream
+Author: Ruben Undheim <ruben.undheim@gmail.com>
 Index: yosys/Makefile
 ===================================================================
 --- yosys.orig/Makefile	2014-09-05 22:04:33.718537262 +0200

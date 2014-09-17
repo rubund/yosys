@@ -1,0 +1,43 @@
+Description: Patch to make CPPFLAGS, CXXFLAGS and LDFLAGS
+  from dpkg-buildflags be used.
+Forwarded: will do
+Author: Ruben Undheim <ruben.undheim@gmail.com>
+Index: yosys/Makefile
+===================================================================
+--- yosys.orig/Makefile	2014-09-14 13:03:35.882682725 +0200
++++ yosys/Makefile	2014-09-14 13:09:24.306686462 +0200
+@@ -27,8 +27,8 @@
+ 
+ all: top-all
+ 
+-CXXFLAGS = -Wall -Wextra -ggdb -I"$(shell pwd)" -MD -DYOSYS_SRC='"$(shell pwd)"' -D_YOSYS_ -fPIC -I${DESTDIR}/include
+-LDFLAGS = -L${DESTDIR}/lib
++CXXFLAGS += -Wall -Wextra -ggdb -I"$(shell pwd)" -MD -DYOSYS_SRC='"$(shell pwd)"' -D_YOSYS_ -fPIC -I${DESTDIR}/include
++LDFLAGS += -L${DESTDIR}/lib
+ LDLIBS = -lstdc++ -lm
+ QMAKE = qmake-qt4
+ SED = sed
+@@ -195,10 +195,10 @@
+ 	$(P) $(CXX) -o yosys $(LDFLAGS) $(OBJS) $(LDLIBS)
+ 
+ %.o: %.cc
+-	$(P) $(CXX) -o $@ -c $(CXXFLAGS) $<
++	$(P) $(CXX) -o $@ -c $(CPPFLAGS) $(CXXFLAGS) $<
+ 
+ %.o: %.cpp
+-	$(P) $(CXX) -o $@ -c $(CXXFLAGS) $<
++	$(P) $(CXX) -o $@ -c $(CPPFLAGS) $(CXXFLAGS) $<
+ 
+ kernel/version_$(GIT_REV).cc: Makefile
+ 	$(P) rm -f kernel/version_*.o kernel/version_*.d kernel/version_*.cc
+@@ -206,8 +206,8 @@
+ 			$(CXX) --version | tr ' ()' '\n' | grep '^[0-9]' | head -n1` $(filter -f% -m% -O% -DNDEBUG,$(CXXFLAGS)))\";" > kernel/version_$(GIT_REV).cc
+ 
+ yosys-config: yosys-config.in
+-	$(P) $(SED) -e 's,@CXX@,$(CXX),;' -e 's,@CXXFLAGS@,$(CXXFLAGS),;' -e 's,@LDFLAGS@,$(LDFLAGS),;' -e 's,@LDLIBS@,$(LDLIBS),;' \
+-			-e 's,@BINDIR@,$(DESTDIR)/bin,;' -e 's,@DATDIR@,$(DESTDIR)/share/yosys,;' < yosys-config.in > yosys-config
++	$(P) $(SED) -e 's#@CXX@#$(CXX)#;' -e 's#@CXXFLAGS@#$(CXXFLAGS)#;' -e 's#@LDFLAGS@#$(LDFLAGS)#;' -e 's#@LDLIBS@#$(LDLIBS)#;' \
++			-e 's#@BINDIR@#$(DESTDIR)/bin#;' -e 's#@DATDIR@#$(DESTDIR)/share/yosys#;' < yosys-config.in > yosys-config
+ 	$(Q) chmod +x yosys-config
+ 
+ abc/abc-$(ABCREV):
