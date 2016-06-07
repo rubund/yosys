@@ -156,6 +156,7 @@ design:
 	task_func_decl design |
 	param_decl design |
 	localparam_decl design |
+	package design |
 	/* empty */;
 
 attr:
@@ -242,6 +243,24 @@ module:
 		log_assert(ast_stack.size() == 1);
 		current_ast_mod = NULL;
 	};
+
+
+package:
+    attr TOK_PACKAGE TOK_ID {
+        AstNode *mod = new AstNode(AST_PACKAGE);
+        ast_stack.back()->children.push_back(mod);
+        ast_stack.push_back(mod);
+        current_ast_mod = mod;
+    } ';' package_body TOK_ENDPACKAGE {
+        ast_stack.pop_back();
+        current_ast_mod = NULL;
+    };
+
+package_body:
+    package_body package_body_stmt |;
+
+package_body_stmt:
+	localparam_decl;
 
 module_para_opt:
 	'#' '(' { astbuf1 = nullptr; } module_para_list { if (astbuf1) delete astbuf1; } ')' | /* empty */;
