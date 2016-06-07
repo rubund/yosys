@@ -994,7 +994,7 @@ void AST::process(RTLIL::Design *design, AstNode *ast, bool dump_ast1, bool dump
 	for (auto it = current_ast->children.begin(); it != current_ast->children.end(); it++)
 	{
 		if ((*it)->type == AST_PACKAGE){
-			std::cout << "Processing package ...\n";
+			std::cout << "Processing package "<< (*it)->str << " ...\n";
 		}
 		else if ((*it)->type == AST_MODULE)
 		{

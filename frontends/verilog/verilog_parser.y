@@ -251,6 +251,7 @@ package:
         ast_stack.back()->children.push_back(mod);
         ast_stack.push_back(mod);
         current_ast_mod = mod;
+        mod->str = *$3;
 		append_attr(mod, $1);
     } ';' package_body TOK_ENDPACKAGE {
         ast_stack.pop_back();
