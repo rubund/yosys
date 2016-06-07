@@ -993,7 +993,10 @@ void AST::process(RTLIL::Design *design, AstNode *ast, bool dump_ast1, bool dump
 	log_assert(current_ast->type == AST_DESIGN);
 	for (auto it = current_ast->children.begin(); it != current_ast->children.end(); it++)
 	{
-		if ((*it)->type == AST_MODULE)
+		if ((*it)->type == AST_PACKAGE){
+			std::cout << "Processing package ...\n";
+		}
+		else if ((*it)->type == AST_MODULE)
 		{
 			for (auto n : global_decls)
 				(*it)->children.push_back(n->clone());
