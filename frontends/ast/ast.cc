@@ -151,6 +151,8 @@ std::string AST::type2str(AstNodeType type)
 	X(AST_POSEDGE)
 	X(AST_NEGEDGE)
 	X(AST_EDGE)
+	X(AST_PACKAGE)
+	X(AST_INTERFACE)
 #undef X
 	default:
 		log_abort();
