@@ -1302,6 +1302,7 @@ expr:
 
 basic_expr:
 	rvalue {
+        std::cout << "HER ER JEG" << "1: " << $1 << std::endl;
 		$$ = $1;
 	} |
 	'(' expr ')' TOK_CONST {

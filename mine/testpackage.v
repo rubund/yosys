@@ -2,7 +2,7 @@
 package testpackage;
 
 
-    localparam ELG = 51;
+    localparam [4:0] ELG = 11;
 
 
 endpackage

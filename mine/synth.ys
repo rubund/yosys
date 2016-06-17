@@ -1,0 +1,3 @@
+read_verilog -sv testpackage.v 
+read_verilog -sv testmodule.v 
+write_ilang no1.ilang

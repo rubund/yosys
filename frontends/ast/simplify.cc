@@ -41,6 +41,13 @@ YOSYS_NAMESPACE_BEGIN
 using namespace AST;
 using namespace AST_INTERNAL;
 
+
+void AstNode::printnode()
+{
+	//FILE *tmpfile = fopen("/tmp", "w");
+	this->dumpVlog(stdout,"");
+	//fclose(tmpfile);
+}
 // convert the AST into a simpler AST that has all parameters substituted by their
 // values, unrolled for-loops, expanded generate blocks, etc. when this function
 // is done with an AST it can be converted into RTLIL using genRTLIL().
@@ -52,6 +59,9 @@ bool AstNode::simplify(bool const_fold, bool at_zero, bool in_lvalue, int stage,
 	static int recursion_counter = 0;
 	static pair<string, int> last_blocking_assignment_warn;
 	static bool deep_recursion_warning = false;
+	std::cout << "Will simplify the node:\n";
+	printnode();
+	std::cout << "\n\n";
 
 	if (recursion_counter++ == 1000 && deep_recursion_warning) {
 		log_warning("Deep recursion in AST simplifier.\nDoes this design contain insanely long expressions?\n");
@@ -931,10 +941,12 @@ bool AstNode::simplify(bool const_fold, bool at_zero, bool in_lvalue, int stage,
 	// unroll for loops and generate-for blocks
 	if ((type == AST_GENFOR || type == AST_FOR) && children.size() != 0)
 	{
+		//std::cout << "Found one for loop" << std::endl;
 		AstNode *init_ast = children[0];
 		AstNode *while_ast = children[1];
 		AstNode *next_ast = children[2];
 		AstNode *body_ast = children[3];
+		
 
 		while (body_ast->type == AST_GENBLOCK && body_ast->str.empty() &&
 				body_ast->children.size() == 1 && body_ast->children.at(0)->type == AST_GENBLOCK)

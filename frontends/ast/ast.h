@@ -250,6 +250,8 @@ namespace AST
 		bool operator!=(const AstNode &other) const;
 		bool contains(const AstNode *other) const;
 
+		void printnode();
+
 		// helper functions for creating AST nodes for constants
 		static AstNode *mkconst_int(uint32_t v, bool is_signed, int width = 32);
 		static AstNode *mkconst_bits(const std::vector<RTLIL::State> &v, bool is_signed);
