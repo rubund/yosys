@@ -214,12 +214,14 @@ bool expand_module(RTLIL::Design *design, RTLIL::Module *module, bool flag_check
 		// some lists, so that they can be replaced further down:
 		for (auto &conn : cell->connections()) {
 			if(mod->wires_.count(conn.first) != 0 && mod->wire(conn.first)->is_interface) { // Check if the connection is present as an interface in the sub-module's port list
-				if(conn.second.is_interface) { // Check if the 'wire' is an interface instance in the parent module
-					if(module->interface(conn.second.interface_name)) { // Check if the interface instance is present in module
-						RTLIL::Module *mod_replace_ports = design->modules_[module->interface(conn.second.interface_name)->type];
+				if(conn.second.is_bit() && conn.second.bits()[0].wire->get_bool_attribute("\\is_interface")) { // Check if the 'wire' is an interface instance in the parent module
+					RTLIL::Wire *wire_for_interface = conn.second.bits()[0].wire;
+					RTLIL::IdString interface_name = wire_for_interface->name;
+					if(module->interface(interface_name)) { // Check if the interface instance is present in module
+						RTLIL::Module *mod_replace_ports = design->modules_[module->interface(interface_name)->type];
 						for (auto &mod_wire : mod_replace_ports->wires_) {
 							std::string signal_name1 = "\\" + std::string(log_id(conn.first)) + "." + std::string(log_id(mod_wire.first));
-							std::string signal_name2 = "\\" + std::string(log_id(conn.second.interface_name)) + "." + std::string(log_id(mod_wire.first));
+							std::string signal_name2 = "\\" + std::string(log_id(interface_name)) + "." + std::string(log_id(mod_wire.first));
 							connections_to_add_name.push_back(RTLIL::IdString(signal_name1));
 							if(module->wires_.count(signal_name2) == 0) {
 								log_error("Could not find signal '%s' in '%s'\n", signal_name2.c_str(), log_id(module->name));
@@ -230,14 +232,14 @@ bool expand_module(RTLIL::Design *design, RTLIL::Module *module, bool flag_check
 							}
 						}
 						connections_to_remove.push_back(conn.first);
-						interfaces_to_add_to_submodule[conn.first] = module->interface(conn.second.interface_name);
+						interfaces_to_add_to_submodule[conn.first] = module->interface(interface_name);
 					}
 					// If the interface instance has not already been derived in the module, we cannot complete at this stage. Set "has_interfaces_not_found"
 					// which will delay the expansion of this cell:
 					else {
 						// If we have already gone over all cells in this module, and the interface has still not been found - flag it as an error:
 						if(module->done_interface_cells) {
-							log_warning("Could not find interface instance for `%s' in `%s'\n", log_id(conn.second.interface_name), log_id(module));
+							log_warning("Could not find interface instance for `%s' in `%s'\n", log_id(interface_name), log_id(module));
 						}
 						else {
 							// Only set has_interfaces_not_found if it would be possible to find them, since otherwiser we will end up in an infinite loop:

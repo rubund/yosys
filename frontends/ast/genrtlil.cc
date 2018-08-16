@@ -862,9 +862,9 @@ RTLIL::SigSpec AstNode::genRTLIL(int width_hint, bool sign_hint)
 		wire->attributes["\\src"] = stringf("%s:%d", filename.c_str(), linenum);
 		wire->start_offset = 0;
 		wire->port_id = port_id;
-		wire->port_input = false;
-		wire->port_output = false;
-		wire->is_interface = true;
+		wire->port_input = true;
+		wire->port_output = true;
+		wire->set_bool_attribute("\\is_interface");
 		wire->upto = 0;
 		}
 		break;
@@ -966,6 +966,7 @@ RTLIL::SigSpec AstNode::genRTLIL(int width_hint, bool sign_hint)
 			RTLIL::Wire *wire = NULL;
 			RTLIL::SigChunk chunk;
 			bool is_interface = false;
+			RTLIL::Wire *wire_for_interface = NULL;
 
 			int add_undef_bits_msb = 0;
 			int add_undef_bits_lsb = 0;
@@ -987,13 +988,15 @@ RTLIL::SigSpec AstNode::genRTLIL(int width_hint, bool sign_hint)
 				goto use_const_chunk;
 			}
 			else if (id2ast && (id2ast->type == AST_WIRE || id2ast->type == AST_AUTOWIRE || id2ast->type == AST_MEMORY) && current_module->wires_.count(str) != 0) {
-				RTLIL::Wire *current_wire = current_module->wire(str);
-				if (current_wire->is_interface)
+				wire_for_interface = current_module->wire(str);
+				if (wire_for_interface->get_bool_attribute("\\is_interface"))
 					is_interface = true;
 				// Ignore
 			}
 			// If an identifier is found that is not already known, assume that it is an interface:
 			else if (1) { // FIXME: Check if sv_mode first?
+				wire_for_interface = current_module->addWire(str);
+				wire_for_interface->set_bool_attribute("\\is_interface");
 				is_interface = true;
 			}
 			else {
@@ -1009,9 +1012,7 @@ RTLIL::SigSpec AstNode::genRTLIL(int width_hint, bool sign_hint)
 			// This makes it possible for the hierarchy pass to see what are interface connections and then replace them
 			// with the individual signals:
 			if (is_interface) {
-				RTLIL::SigSpec tmp = RTLIL::SigSpec();
-				tmp.is_interface = true;
-				tmp.interface_name = str;
+				RTLIL::SigSpec tmp = RTLIL::SigSpec(wire_for_interface);
 				return tmp;
 			}
 
