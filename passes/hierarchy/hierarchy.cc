@@ -299,7 +299,7 @@ bool expand_module(RTLIL::Design *design, RTLIL::Module *module, bool flag_check
 		if (cell->parameters.size() == 0 && (interfaces_to_add_to_submodule.size() == 0 || cell->already_derived)) {
 			// If the cell being processed is an the interface instance itself, go down to "handle_interface_instance:",
 			// so that the signals of the interface are added to the parent module.
-			if (mod->is_interface) {
+			if (mod->get_bool_attribute("\\is_interface")) {
 				goto handle_interface_instance;
 			}
 			continue;
@@ -315,7 +315,7 @@ bool expand_module(RTLIL::Design *design, RTLIL::Module *module, bool flag_check
 
 			// We add all the signals of the interface explicitly to the parent module. This is always needed when we encounter
 			// an interface instance:
-			if (mod->is_interface && !cell->replaced_interface) {
+			if (mod->get_bool_attribute("\\is_interface") && !cell->replaced_interface) {
 				module->interfaces_[cell->name] = cell;
 				RTLIL::Module *derived_module = design->modules_[cell->type];
 				for (auto &mod_wire : derived_module->wires_) {
