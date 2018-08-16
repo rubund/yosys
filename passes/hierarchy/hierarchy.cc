@@ -296,7 +296,8 @@ bool expand_module(RTLIL::Design *design, RTLIL::Module *module, bool flag_check
 
 		// If there are no overridden parameters AND not interfaces, then we can use the existing module instance as the type
 		// for the cell:
-		if (cell->parameters.size() == 0 && (interfaces_to_add_to_submodule.size() == 0 || cell->already_derived)) {
+		if (cell->parameters.size() == 0 && (interfaces_to_add_to_submodule.size() == 0 || !(cell->get_bool_attribute("\\module_not_derived")))) {
+			cell->attributes.erase("\\module_not_derived");
 			// If the cell being processed is an the interface instance itself, go down to "handle_interface_instance:",
 			// so that the signals of the interface are added to the parent module.
 			if (mod->get_bool_attribute("\\is_interface")) {
@@ -308,14 +309,14 @@ bool expand_module(RTLIL::Design *design, RTLIL::Module *module, bool flag_check
 		cell->type = mod->derive(design, cell->parameters, interfaces_to_add_to_submodule);
 		cell->parameters.clear();
 		// We set 'already-derived' such that we will not rederive the cell again (needed when there are interfaces connected to the cell)
-		cell->already_derived = true;
+		cell->attributes.erase("\\module_not_derived");
 		did_something = true;
 
 		handle_interface_instance:
 
 			// We add all the signals of the interface explicitly to the parent module. This is always needed when we encounter
 			// an interface instance:
-			if (mod->get_bool_attribute("\\is_interface") && !cell->replaced_interface) {
+			if (mod->get_bool_attribute("\\is_interface") && cell->get_bool_attribute("\\interfaces_not_handled")) {
 				module->interfaces_[cell->name] = cell;
 				RTLIL::Module *derived_module = design->modules_[cell->type];
 				for (auto &mod_wire : derived_module->wires_) {
@@ -325,7 +326,7 @@ bool expand_module(RTLIL::Design *design, RTLIL::Module *module, bool flag_check
 				}
 				// We only need to do it once for every instantiation of an interface (and since we risk ending up here again due to
 				// 'did_something', we need to set 'cell->replaced_interface = true':
-				cell->replaced_interface = true;
+				cell->attributes.erase("\\interfaces_not_handled");
 				did_something = true;
 			}
 	}
