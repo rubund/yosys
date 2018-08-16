@@ -982,7 +982,7 @@ static AstModule* process_module(AstNode *ast, bool defer)
 	}
 
 	if (ast->type == AST_INTERFACE)
-		current_module->is_interface = true;
+		current_module->set_bool_attribute("\\is_interface");
 	current_module->ast = ast_before_simplify;
 	current_module->nolatches = flag_nolatches;
 	current_module->nomeminit = flag_nomeminit;
