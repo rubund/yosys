@@ -18,7 +18,7 @@ module TopModule(
   assign sig_out = MyInterfaceInstance.mysig_out;
 
 
-  assign u_MyInterfaceInstance.setting = 1;
+  assign MyInterfaceInstance.setting = 1;
 
 endmodule
 
@@ -26,7 +26,7 @@ interface MyInterface #(
   parameter WIDTH = 3)(
   );
 
-  logic [1:0] setting;
+  logic setting;
   logic [WIDTH-1:0] other_setting;
 
   logic [1:0] mysig_out;
@@ -46,7 +46,7 @@ module SubModule1(
     if(rst)
       u_MyInterface.mysig_out <= 0;
     else begin
-      if(u_MyInterface.setting[0])
+      if(u_MyInterface.setting)
         u_MyInterface.mysig_out <= sig;
       else
         u_MyInterface.mysig_out <= ~sig;
