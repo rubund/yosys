@@ -626,7 +626,6 @@ RTLIL::Module::Module()
 	refcount_wires_ = 0;
 	refcount_cells_ = 0;
 	is_interface = false;
-	done_interface_cells = false;
 }
 
 RTLIL::Module::~Module()
@@ -2216,8 +2215,6 @@ RTLIL::Cell::Cell() : module(nullptr)
 	static unsigned int hashidx_count = 123456789;
 	hashidx_count = mkhash_xorshift(hashidx_count);
 	hashidx_ = hashidx_count;
-	replaced_interface = false;
-	already_derived = false;
 
 	// log("#memtrace# %p\n", this);
 	memhasher();
