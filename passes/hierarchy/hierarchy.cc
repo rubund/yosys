@@ -323,8 +323,18 @@ bool expand_module(RTLIL::Design *design, RTLIL::Module *module, bool flag_check
 				RTLIL::Module *derived_module = design->modules_[cell->type];
 				for (auto &mod_wire : derived_module->wires_) {
 					std::string signal_name = "\\" + std::string(log_id(cell->name)) + "." + std::string(log_id(mod_wire.first));
-					if (module->wires_.count(signal_name) == 0)
+					if (module->wires_.count(signal_name) == 0) {
 						module->addWire(signal_name, mod_wire.second);
+					}
+					else {
+						RTLIL::Wire *existing_wire = module->wire(signal_name);
+						int width = existing_wire->width;
+						int width2 = mod_wire.second->width;
+						if (width != width2) {
+							module->wires_.erase(signal_name);
+							module->addWire(signal_name, mod_wire.second);
+						}
+					}
 				}
 				// We only need to do it once for every instantiation of an interface (and since we risk ending up here again due to
 				// 'did_something', we need to set 'cell->replaced_interface = true':
