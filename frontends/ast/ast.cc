@@ -1131,13 +1131,27 @@ RTLIL::IdString AstModule::derive(RTLIL::Design *design, dict<RTLIL::IdString, R
 			}
 			else {
 				RTLIL::Wire *existing_wire = mod->wire(signal_name3);
+				int width = existing_wire->width;
+				int width2 = w.second->width;
 				// Since support for modports is not implemented, we set the new signals to inout
-				existing_wire->port_input = true; // XXX: handle modports
-				existing_wire->port_output = true; // XXX: handle modports
-				if (existing_wire->port_id <= 0) {
-					existing_wire->port_id = max_port_id;
+				if (width == width2) {
+					existing_wire->port_input = true; // XXX: handle modports
+					existing_wire->port_output = true; // XXX: handle modports
+					if (existing_wire->port_id <= 0) {
+						existing_wire->port_id = max_port_id;
+						mod->ports.push_back(signal_name3);
+					}
+				}
+				else {
+					mod->wires_.erase(signal_name3);
+					RTLIL::Wire *new_wire = mod->addWire(RTLIL::IdString(signal_name3), w.second);
+					// Since support for modports is not implemented, we set the new signals to inout
+					new_wire->port_input = true; // XXX: handle modports
+					new_wire->port_output = true; // XXX: handle modports
+					new_wire->port_id = max_port_id;
 					mod->ports.push_back(signal_name3);
 				}
+				
 			}
 		}
 	}
