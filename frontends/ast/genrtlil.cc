@@ -988,7 +988,7 @@ RTLIL::SigSpec AstNode::genRTLIL(int width_hint, bool sign_hint)
 			}
 			else if (id2ast && (id2ast->type == AST_WIRE || id2ast->type == AST_AUTOWIRE || id2ast->type == AST_MEMORY) && current_module->wires_.count(str) != 0) {
 				RTLIL::Wire *current_wire = current_module->wire(str);
-				if (current_wire->is_interface)
+				if (current_wire->get_bool_attribute("\\is_interface"))
 					is_interface = true;
 				// Ignore
 			}
