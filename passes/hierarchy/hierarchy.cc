@@ -37,6 +37,21 @@ struct generate_port_decl_t {
 	int index;
 };
 
+struct ReconnectWorker
+{
+	void operator()(RTLIL::SigSpec &sig)
+	{
+		std::cout << "Start sigspec" << std::endl;
+		for (auto &bit : sig){
+			if (bit.wire != NULL)
+				std::cout << "found: "  << log_id(bit.wire->name) << ", offset: " << bit.offset << std::endl;
+			else
+				std::cout << "found without name" << std::endl;
+		}
+		std::cout << "Stop sigspec" << std::endl;
+	}
+};
+
 void generate(RTLIL::Design *design, const std::vector<std::string> &celltypes, const std::vector<generate_port_decl_t> &portdecls)
 {
 	std::set<RTLIL::IdString> found_celltypes;
@@ -144,6 +159,8 @@ bool expand_module(RTLIL::Design *design, RTLIL::Module *module, bool flag_check
 	bool did_something = false;
 	std::map<RTLIL::Cell*, std::pair<int, int>> array_cells;
 	std::string filename;
+
+	ReconnectWorker reconnectWorker;
 
 	for (auto &cell_it : module->cells_)
 	{
@@ -333,6 +350,7 @@ bool expand_module(RTLIL::Design *design, RTLIL::Module *module, bool flag_check
 						if (width != width2) {
 							module->wires_.erase(signal_name);
 							module->addWire(signal_name, mod_wire.second);
+							//module->rewrite_sigspecs(reconnectWorker);
 						}
 					}
 				}
