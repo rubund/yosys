@@ -1227,7 +1227,7 @@ void RTLIL::Module::check()
 		if (it.second->port_id) {
 			log_assert(GetSize(ports) >= it.second->port_id);
 			log_assert(ports.at(it.second->port_id-1) == it.first);
-			log_assert(it.second->port_input || it.second->port_output || it.second->is_interface);
+			log_assert(it.second->port_input || it.second->port_output);
 			if (GetSize(ports_declared) < it.second->port_id)
 				ports_declared.resize(it.second->port_id);
 			log_assert(ports_declared[it.second->port_id-1] == false);
@@ -1604,7 +1604,7 @@ void RTLIL::Module::fixup_ports()
 	std::vector<RTLIL::Wire*> all_ports;
 
 	for (auto &w : wires_)
-		if (w.second->port_input || w.second->port_output || w.second->is_interface)
+		if (w.second->port_input || w.second->port_output)
 			all_ports.push_back(w.second);
 		else
 			w.second->port_id = 0;

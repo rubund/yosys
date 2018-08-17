@@ -862,9 +862,9 @@ RTLIL::SigSpec AstNode::genRTLIL(int width_hint, bool sign_hint)
 		wire->attributes["\\src"] = stringf("%s:%d", filename.c_str(), linenum);
 		wire->start_offset = 0;
 		wire->port_id = port_id;
-		wire->port_input = false;
-		wire->port_output = false;
-		wire->is_interface = true;
+		wire->port_input = true;
+		wire->port_output = true;
+		wire->set_bool_attribute("\\is_interface");
 		wire->upto = 0;
 		}
 		break;
@@ -1459,6 +1459,8 @@ RTLIL::SigSpec AstNode::genRTLIL(int width_hint, bool sign_hint)
 
 			RTLIL::Cell *cell = current_module->addCell(str, "");
 			cell->attributes["\\src"] = stringf("%s:%d", filename.c_str(), linenum);
+			cell->set_bool_attribute("\\interfaces_not_handled");
+			cell->set_bool_attribute("\\module_not_derived");
 
 			for (auto it = children.begin(); it != children.end(); it++) {
 				AstNode *child = *it;
