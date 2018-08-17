@@ -237,7 +237,7 @@ bool expand_module(RTLIL::Design *design, RTLIL::Module *module, bool flag_check
 					// which will delay the expansion of this cell:
 					else {
 						// If we have already gone over all cells in this module, and the interface has still not been found - flag it as an error:
-						if(module->done_interface_cells) {
+						if(!(module->get_bool_attribute("\\cells_not_processed"))) {
 							log_warning("Could not find interface instance for `%s' in `%s'\n", log_id(interface_name), log_id(module));
 						}
 						else {
@@ -331,7 +331,7 @@ bool expand_module(RTLIL::Design *design, RTLIL::Module *module, bool flag_check
 	}
 	// Setting a flag such that it can be known that we have been through all cells at least once, such that we can know whether to flag
 	// an error because of interface instances not found:
-	module->done_interface_cells = true;
+	module->attributes.erase("\\cells_not_processed");
 
 
 	for (auto &it : array_cells)

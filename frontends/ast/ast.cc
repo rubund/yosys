@@ -908,6 +908,7 @@ static AstModule* process_module(AstNode *ast, bool defer)
 	current_module->ast = NULL;
 	current_module->name = ast->str;
 	current_module->attributes["\\src"] = stringf("%s:%d", ast->filename.c_str(), ast->linenum);
+	current_module->set_bool_attribute("\\cells_not_processed");
 
 	current_ast_mod = ast;
 	AstNode *ast_before_simplify = ast->clone();
