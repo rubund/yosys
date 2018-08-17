@@ -302,6 +302,9 @@ bool expand_module(RTLIL::Design *design, RTLIL::Module *module, bool flag_check
 			if (mod->get_bool_attribute("\\is_interface")) {
 				goto handle_interface_instance;
 			}
+			else {
+				cell->attributes.erase("\\interfaces_not_handled");
+			}
 			continue;
 		}
 
@@ -325,9 +328,9 @@ bool expand_module(RTLIL::Design *design, RTLIL::Module *module, bool flag_check
 				}
 				// We only need to do it once for every instantiation of an interface (and since we risk ending up here again due to
 				// 'did_something', we need to set 'cell->replaced_interface = true':
-				cell->attributes.erase("\\interfaces_not_handled");
 				did_something = true;
 			}
+			cell->attributes.erase("\\interfaces_not_handled");
 	}
 	// Setting a flag such that it can be known that we have been through all cells at least once, such that we can know whether to flag
 	// an error because of interface instances not found:
