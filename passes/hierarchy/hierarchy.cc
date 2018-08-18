@@ -39,12 +39,31 @@ struct generate_port_decl_t {
 
 struct ReconnectWorker
 {
+	std::vector<RTLIL::IdString> wires;
+
+	RTLIL::Module *module;
+
+	void add_wire_to_reconnect(RTLIL::IdString wire_name)
+	{
+		wires.push_back(wire_name);
+	}
+
 	void operator()(RTLIL::SigSpec &sig)
 	{
 		std::cout << "Start sigspec" << std::endl;
 		for (auto &bit : sig){
-			if (bit.wire != NULL)
+			if (bit.wire != NULL) {
+				for(unsigned int i=0;i<wires.size();i++) {
+					if (wires[i] == bit.wire->name) {
+						if (module->wires_.count(bit.wire->name) > 0)
+							bit.wire = module->wire(bit.wire->name);
+						else
+							printf("Not found wire to reconnect");
+						break;
+					}
+				}
 				std::cout << "found: "  << log_id(bit.wire->name) << ", offset: " << bit.offset << std::endl;
+			}
 			else
 				std::cout << "found without name" << std::endl;
 		}
@@ -160,7 +179,6 @@ bool expand_module(RTLIL::Design *design, RTLIL::Module *module, bool flag_check
 	std::map<RTLIL::Cell*, std::pair<int, int>> array_cells;
 	std::string filename;
 
-	ReconnectWorker reconnectWorker;
 
 	for (auto &cell_it : module->cells_)
 	{
@@ -336,6 +354,8 @@ bool expand_module(RTLIL::Design *design, RTLIL::Module *module, bool flag_check
 			// We add all the signals of the interface explicitly to the parent module. This is always needed when we encounter
 			// an interface instance:
 			if (mod->get_bool_attribute("\\is_interface") && cell->get_bool_attribute("\\interfaces_not_handled")) {
+				ReconnectWorker reconnectWorker;
+				reconnectWorker.module = module;
 				module->interfaces_[cell->name] = cell;
 				RTLIL::Module *derived_module = design->modules_[cell->type];
 				for (auto &mod_wire : derived_module->wires_) {
@@ -350,10 +370,11 @@ bool expand_module(RTLIL::Design *design, RTLIL::Module *module, bool flag_check
 						if (width != width2) {
 							module->wires_.erase(signal_name);
 							module->addWire(signal_name, mod_wire.second);
-							//module->rewrite_sigspecs(reconnectWorker);
+							reconnectWorker.add_wire_to_reconnect(signal_name);
 						}
 					}
 				}
+				module->rewrite_sigspecs(reconnectWorker);
 				// We only need to do it once for every instantiation of an interface (and since we risk ending up here again due to
 				// 'did_something', we need to set 'cell->replaced_interface = true':
 				did_something = true;
