@@ -51,21 +51,49 @@ struct ReconnectWorker
 	void operator()(RTLIL::SigSpec &sig)
 	{
 		std::cout << "Start sigspec. bits: " << sig.bits().size() << ", chunks: " << sig.chunks().size() << std::endl;
+		RTLIL::Wire *current_wire = NULL;
+		int current_wire_width = -1;
+		int current_wire_index = -1;
 		for (RTLIL::SigBit &bit : sig){
 			if (bit.wire != NULL) {
 				for(unsigned int i=0;i<wires.size();i++) {
 					if (wires[i] == bit.wire->name) {
-						if (module->wires_.count(bit.wire->name) > 0)
-							bit.wire = module->wire(bit.wire->name);
-						else
-							printf("Not found wire to reconnect");
+						if (module->wires_.count(bit.wire->name) > 0) {
+							RTLIL::Wire *next_wire;
+							next_wire = module->wire(bit.wire->name);
+							if (next_wire != current_wire) {
+								current_wire_index = bit.offset;
+							}
+							else {
+								current_wire_index++;
+							}
+							current_wire = module->wire(bit.wire->name);
+							current_wire_width = current_wire->width;
+							bit.wire = current_wire;
+							std::cout << "Reconnecting " << log_id(bit.wire->name) << std::endl;
+						}
+						else {
+							printf("Not found wire to reconnect\n");
+						}
 						break;
 					}
 				}
 				std::cout << "found: "  << log_id(bit.wire->name) << ", offset: " << bit.offset << std::endl;
 			}
-			else
+			else {
 				std::cout << "found without name" << std::endl;
+				if (current_wire != NULL) {
+					if (current_wire_index < current_wire_width) {
+						printf("ok\n");
+						bit.wire = current_wire;
+						current_wire_index++;
+						bit.offset = current_wire_index;
+					}
+					else {
+						current_wire = NULL;
+					}
+				}
+			}
 		}
 		std::cout << "Stop sigspec" << std::endl;
 	}
