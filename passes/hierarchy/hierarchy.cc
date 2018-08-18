@@ -62,7 +62,7 @@ struct ReconnectWorker
 							RTLIL::Wire *next_wire;
 							next_wire = module->wire(bit.wire->name);
 							if (next_wire != current_wire) {
-								current_wire_index = bit.offset;
+								current_wire_index = bit.offset+1;
 							}
 							else {
 								current_wire_index++;
@@ -86,8 +86,8 @@ struct ReconnectWorker
 					if (current_wire_index < current_wire_width) {
 						printf("ok\n");
 						bit.wire = current_wire;
-						current_wire_index++;
 						bit.offset = current_wire_index;
+						current_wire_index++;
 					}
 					else {
 						current_wire = NULL;
