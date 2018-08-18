@@ -50,8 +50,8 @@ struct ReconnectWorker
 
 	void operator()(RTLIL::SigSpec &sig)
 	{
-		std::cout << "Start sigspec" << std::endl;
-		for (auto &bit : sig){
+		std::cout << "Start sigspec. bits: " << sig.bits().size() << ", chunks: " << sig.chunks().size() << std::endl;
+		for (RTLIL::SigBit &bit : sig){
 			if (bit.wire != NULL) {
 				for(unsigned int i=0;i<wires.size();i++) {
 					if (wires[i] == bit.wire->name) {
