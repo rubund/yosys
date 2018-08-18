@@ -1096,54 +1096,31 @@ RTLIL::IdString AstModule::derive(RTLIL::Design *design, dict<RTLIL::IdString, R
 	if (has_interfaces)
 		modname += "$interfaces$" + interf_info;
 
+	// FIXME: Add the new ports in the submodule before process_module instead.. (easier, do not need to reconnect things..)
+
 	if (!design->has(modname)) {
 		new_ast->str = modname;
 		design->add(process_module(new_ast, false));
 		design->module(modname)->check();
-	} else {
-		log("Found cached RTLIL representation for module `%s'.\n", modname.c_str());
-	}
 
-	RTLIL::Module* mod = design->module(modname);
+		RTLIL::Module* mod = design->module(modname);
 
-	for(auto &intf : interfaces) {
-		mod->interfaces_[intf.first] = intf.second;
-	}
-
-	for(auto &intf : mod->interfaces_) {
-		RTLIL::Module * interface_module = design->module(intf.second->type);
-		int max_port_id = 0;
-		for(auto &w : mod->wires_) {
-			max_port_id = w.second->port_id > max_port_id ? w.second->port_id : max_port_id;
+		for(auto &intf : interfaces) {
+			mod->interfaces_[intf.first] = intf.second;
 		}
-		for(auto &w : interface_module->wires_){
-			max_port_id++;
-			std::string signal_name3 = "\\" + std::string(log_id(intf.first)) + "." + std::string(log_id(w.first));
 
-			// If signal with the same name already exists, we use the existing signal:
-			if (mod->wires_.count(signal_name3) == 0) {
-				RTLIL::Wire *new_wire = mod->addWire(RTLIL::IdString(signal_name3), w.second);
-				// Since support for modports is not implemented, we set the new signals to inout
-				new_wire->port_input = true; // XXX: handle modports
-				new_wire->port_output = true; // XXX: handle modports
-				new_wire->port_id = max_port_id;
-				mod->ports.push_back(signal_name3);
+		for(auto &intf : mod->interfaces_) {
+			RTLIL::Module * interface_module = design->module(intf.second->type);
+			int max_port_id = 0;
+			for(auto &w : mod->wires_) {
+				max_port_id = w.second->port_id > max_port_id ? w.second->port_id : max_port_id;
 			}
-			else {
-				RTLIL::Wire *existing_wire = mod->wire(signal_name3);
-				int width = existing_wire->width;
-				int width2 = w.second->width;
-				// Since support for modports is not implemented, we set the new signals to inout
-				if (width == width2) {
-					existing_wire->port_input = true; // XXX: handle modports
-					existing_wire->port_output = true; // XXX: handle modports
-					if (existing_wire->port_id <= 0) {
-						existing_wire->port_id = max_port_id;
-						mod->ports.push_back(signal_name3);
-					}
-				}
-				else {
-					mod->wires_.erase(signal_name3);
+			for(auto &w : interface_module->wires_){
+				max_port_id++;
+				std::string signal_name3 = "\\" + std::string(log_id(intf.first)) + "." + std::string(log_id(w.first));
+
+				// If signal with the same name already exists, we use the existing signal:
+				if (mod->wires_.count(signal_name3) == 0) {
 					RTLIL::Wire *new_wire = mod->addWire(RTLIL::IdString(signal_name3), w.second);
 					// Since support for modports is not implemented, we set the new signals to inout
 					new_wire->port_input = true; // XXX: handle modports
@@ -1151,9 +1128,34 @@ RTLIL::IdString AstModule::derive(RTLIL::Design *design, dict<RTLIL::IdString, R
 					new_wire->port_id = max_port_id;
 					mod->ports.push_back(signal_name3);
 				}
-				
+				else {
+					RTLIL::Wire *existing_wire = mod->wire(signal_name3);
+					int width = existing_wire->width;
+					int width2 = w.second->width;
+					// Since support for modports is not implemented, we set the new signals to inout
+					if (width == width2) {
+						existing_wire->port_input = true; // XXX: handle modports
+						existing_wire->port_output = true; // XXX: handle modports
+						if (existing_wire->port_id <= 0) {
+							existing_wire->port_id = max_port_id;
+							mod->ports.push_back(signal_name3);
+						}
+					}
+					else {
+						mod->wires_.erase(signal_name3);
+						RTLIL::Wire *new_wire = mod->addWire(RTLIL::IdString(signal_name3), w.second);
+						// Since support for modports is not implemented, we set the new signals to inout
+						new_wire->port_input = true; // XXX: handle modports
+						new_wire->port_output = true; // XXX: handle modports
+						new_wire->port_id = max_port_id;
+						mod->ports.push_back(signal_name3);
+					}
+					
+				}
 			}
 		}
+	} else {
+		log("Found cached RTLIL representation for module `%s'.\n", modname.c_str());
 	}
 
 	delete new_ast;
