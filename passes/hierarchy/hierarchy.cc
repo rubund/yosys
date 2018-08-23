@@ -207,6 +207,7 @@ bool expand_module(RTLIL::Design *design, RTLIL::Module *module, bool flag_check
 	std::map<RTLIL::Cell*, std::pair<int, int>> array_cells;
 	std::string filename;
 
+	dict<RTLIL::IdString, RTLIL::Module*> interfaces_in_module;
 
 	for (auto &cell_it : module->cells_)
 	{
@@ -382,32 +383,34 @@ bool expand_module(RTLIL::Design *design, RTLIL::Module *module, bool flag_check
 			// We add all the signals of the interface explicitly to the parent module. This is always needed when we encounter
 			// an interface instance:
 			if (mod->get_bool_attribute("\\is_interface") && cell->get_bool_attribute("\\interfaces_not_handled")) {
-				ReconnectWorker reconnectWorker;
-				reconnectWorker.module = module;
-				std::vector<RTLIL::Wire*> wires_to_delete;
-				module->interfaces_[cell->name] = cell;
+
+				//ReconnectWorker reconnectWorker;
+				//reconnectWorker.module = module;
+				//std::vector<RTLIL::Wire*> wires_to_delete;
+				//module->interfaces_[cell->name] = cell;
 				RTLIL::Module *derived_module = design->modules_[cell->type];
-				for (auto &mod_wire : derived_module->wires_) {
-					std::string signal_name = "\\" + std::string(log_id(cell->name)) + "." + std::string(log_id(mod_wire.first));
-					if (module->wires_.count(signal_name) == 0) {
-						module->addWire(signal_name, mod_wire.second);
-					}
-					else {
-						RTLIL::Wire *existing_wire = module->wire(signal_name);
-						int width = existing_wire->width;
-						int width2 = mod_wire.second->width;
-						if (width != width2) {
-							wires_to_delete.push_back(existing_wire);
-							module->wires_.erase(signal_name);
-							module->addWire(signal_name, mod_wire.second);
-							reconnectWorker.add_wire_to_reconnect(signal_name);
-						}
-					}
-				}
-				module->rewrite_sigspecs(reconnectWorker);
-				for(unsigned int i=0;i<wires_to_delete.size();i++) {
-					//delete wires_to_delete[i]; FIXME: wires are proteced
-				}
+				interfaces_in_module[cell->name] = derived_module;
+				//for (auto &mod_wire : derived_module->wires_) {
+				//	std::string signal_name = "\\" + std::string(log_id(cell->name)) + "." + std::string(log_id(mod_wire.first));
+				//	if (module->wires_.count(signal_name) == 0) {
+				//		module->addWire(signal_name, mod_wire.second);
+				//	}
+				//	else {
+				//		RTLIL::Wire *existing_wire = module->wire(signal_name);
+				//		int width = existing_wire->width;
+				//		int width2 = mod_wire.second->width;
+				//		if (width != width2) {
+				//			wires_to_delete.push_back(existing_wire);
+				//			module->wires_.erase(signal_name);
+				//			module->addWire(signal_name, mod_wire.second);
+				//			reconnectWorker.add_wire_to_reconnect(signal_name);
+				//		}
+				//	}
+				//}
+				//module->rewrite_sigspecs(reconnectWorker);
+				//for(unsigned int i=0;i<wires_to_delete.size();i++) {
+				//	//delete wires_to_delete[i]; FIXME: wires are proteced
+				//}
 				// We only need to do it once for every instantiation of an interface (and since we risk ending up here again due to
 				// 'did_something', we need to set 'cell->replaced_interface = true':
 				did_something = true;
@@ -417,6 +420,10 @@ bool expand_module(RTLIL::Design *design, RTLIL::Module *module, bool flag_check
 	// Setting a flag such that it can be known that we have been through all cells at least once, such that we can know whether to flag
 	// an error because of interface instances not found:
 	module->attributes.erase("\\cells_not_processed");
+
+	if (interfaces_in_module.size() > 0) {
+		module->reprocess_module(design, interfaces_in_module);
+	}
 
 
 	for (auto &it : array_cells)
