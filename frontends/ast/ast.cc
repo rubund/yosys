@@ -1078,13 +1078,21 @@ AstModule::~AstModule()
 
 void AstModule::reprocess_module(RTLIL::Design *design, dict<RTLIL::IdString, RTLIL::Module*> local_interfaces)
 {
+	bool is_top = false;
 	AstNode *new_ast = ast->clone();
 	// FIXME: add interface members to the AST tree 'new_ast' here.
 	std::string original_name = log_id(this->name);
 	std::cout << "original name: " << original_name << std::endl;
 	std::string changed_name = "\\" + original_name + "_before_replacing_local_interfaces";
 	design->rename(this, changed_name);
+	if (this->get_bool_attribute("\\top")) {
+		this->attributes.erase("\\top");
+		is_top = true;
+	}
 	design->add(process_module(new_ast, false));
+	RTLIL::Module* mod = design->module(original_name);
+	if (is_top)
+		mod->set_bool_attribute("\\top");
 }
 
 // create a new parametric module (when needed) and return the name of the generated module - WITH support for interfaces

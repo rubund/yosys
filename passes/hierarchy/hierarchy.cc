@@ -532,6 +532,20 @@ int find_top_mod_score(Design *design, Module *module, dict<Module*, int> &db)
 	return db.at(module);
 }
 
+RTLIL::Module *check_if_top_has_changed(Design *design, Module *top_mod)
+{
+	if(top_mod->get_bool_attribute("\\top"))
+		return top_mod;
+	else {
+		for (auto mod : design->modules()) {
+			if (mod->get_bool_attribute("\\top")) {
+				return mod;
+			}
+		}
+	}
+	return NULL;
+}
+
 struct HierarchyPass : public Pass {
 	HierarchyPass() : Pass("hierarchy", "check, expand and clean up design hierarchy") { }
 	virtual void help()
@@ -777,6 +791,8 @@ struct HierarchyPass : public Pass {
 				if (expand_module(design, module, flag_check, flag_simcheck, libdirs))
 					did_something = true;
 			}
+
+			top_mod = check_if_top_has_changed(design, top_mod);
 		}
 
 		if (top_mod != NULL) {
