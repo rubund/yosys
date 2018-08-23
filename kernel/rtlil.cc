@@ -640,6 +640,11 @@ RTLIL::Module::~Module()
 		delete it->second;
 }
 
+void RTLIL::Module::reprocess_module(RTLIL::Design *design, dict<RTLIL::IdString, RTLIL::Module *> local_interfaces)
+{
+	log_error("Cannot reprocess_module module `%s' !\n", id2cstr(name));
+}
+
 RTLIL::IdString RTLIL::Module::derive(RTLIL::Design*, dict<RTLIL::IdString, RTLIL::Const>, bool mayfail)
 {
 	if (mayfail)

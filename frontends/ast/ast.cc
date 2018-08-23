@@ -1076,6 +1076,17 @@ AstModule::~AstModule()
 		delete ast;
 }
 
+void AstModule::reprocess_module(RTLIL::Design *design, dict<RTLIL::IdString, RTLIL::Module*> local_interfaces)
+{
+	AstNode *new_ast = ast->clone();
+	// FIXME: add interface members to the AST tree 'new_ast' here.
+	std::string original_name = log_id(this->name);
+	std::cout << "original name: " << original_name << std::endl;
+	std::string changed_name = original_name + "_before_replacing_local_interfaces";
+	design->rename(this, changed_name);
+	design->add(process_module(new_ast, false));
+}
+
 // create a new parametric module (when needed) and return the name of the generated module - WITH support for interfaces
 RTLIL::IdString AstModule::derive(RTLIL::Design *design, dict<RTLIL::IdString, RTLIL::Const> parameters, dict<RTLIL::IdString, RTLIL::Cell*> interfaces, bool mayfail)
 {
