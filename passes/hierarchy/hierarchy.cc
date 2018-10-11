@@ -749,7 +749,8 @@ struct HierarchyPass : public Pass {
 					mod_it.second->attributes["\\top"] = RTLIL::Const(1);
 				else
 					mod_it.second->attributes.erase("\\top");
-                mod_it.second->attributes.erase("\\initial_top");
+				mod_it.second->attributes.erase("\\initial_top");
+				mod_it.second->attributes.erase("\\reprocessed");
 			}
 		}
 
