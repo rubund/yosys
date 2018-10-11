@@ -5,6 +5,7 @@ CONFIG := clang
 # CONFIG := emcc
 # CONFIG := mxe
 # CONFIG := msys2
+# CONFIG := msys2-64
 
 # features (the more the better)
 ENABLE_TCL := 1
@@ -18,6 +19,7 @@ ENABLE_LIBYOSYS := 0
 ENABLE_PROTOBUF := 0
 
 # other configuration flags
+ENABLE_GCOV := 0
 ENABLE_GPROF := 0
 ENABLE_DEBUG := 0
 ENABLE_NDEBUG := 0
@@ -155,10 +157,28 @@ LD = gcc
 CXXFLAGS += -std=c++11 -Os
 ABCMKARGS += ARCHFLAGS="-DABC_USE_STDINT_H"
 
+else ifeq ($(CONFIG),gcc-static)
+LD = $(CXX)
+LDFLAGS := $(filter-out -rdynamic,$(LDFLAGS)) -static
+LDLIBS := $(filter-out -lrt,$(LDLIBS)) 
+CXXFLAGS := $(filter-out -fPIC,$(CXXFLAGS))
+CXXFLAGS += -std=c++11 -Os
+ABCMKARGS = CC="$(CC)" CXX="$(CXX)" LD="$(LD)" ABC_USE_LIBSTDCXX=1 LIBS="-lm -lpthread -static" OPTFLAGS="-O" \
+                       ARCHFLAGS="-DABC_USE_STDINT_H -DABC_NO_DYNAMIC_LINKING=1 -Wno-unused-but-set-variable $(ARCHFLAGS)" ABC_USE_NO_READLINE=1
+ifeq ($(DISABLE_ABC_THREADS),1)
+ABCMKARGS += "ABC_USE_NO_PTHREADS=1"
+endif
+
 else ifeq ($(CONFIG),gcc-4.8)
 CXX = gcc-4.8
 LD = gcc-4.8
 CXXFLAGS += -std=c++11 -Os
+ABCMKARGS += ARCHFLAGS="-DABC_USE_STDINT_H"
+
+else ifeq ($(CONFIG),cygwin)
+CXX = gcc
+LD = gcc
+CXXFLAGS += -std=gnu++11 -Os
 ABCMKARGS += ARCHFLAGS="-DABC_USE_STDINT_H"
 
 else ifeq ($(CONFIG),emcc)
@@ -199,14 +219,14 @@ yosys.html: misc/yosys.html
 
 else ifeq ($(CONFIG),mxe)
 PKG_CONFIG = /usr/local/src/mxe/usr/bin/i686-w64-mingw32.static-pkg-config
-CXX = /usr/local/src/mxe/usr/bin/i686-w64-mingw32.static-gcc
-LD = /usr/local/src/mxe/usr/bin/i686-w64-mingw32.static-gcc
+CXX = /usr/local/src/mxe/usr/bin/i686-w64-mingw32.static-g++
+LD = /usr/local/src/mxe/usr/bin/i686-w64-mingw32.static-g++
 CXXFLAGS += -std=c++11 -Os -D_POSIX_SOURCE -DYOSYS_MXE_HACKS -Wno-attributes
 CXXFLAGS := $(filter-out -fPIC,$(CXXFLAGS))
 LDFLAGS := $(filter-out -rdynamic,$(LDFLAGS)) -s
 LDLIBS := $(filter-out -lrt,$(LDLIBS))
-ABCMKARGS += ARCHFLAGS="-DABC_USE_STDINT_H -DWIN32_NO_DLL -DHAVE_STRUCT_TIMESPEC -fpermissive -w"
-ABCMKARGS += LIBS="lib/x86/pthreadVC2.lib -s" ABC_USE_NO_READLINE=1
+ABCMKARGS += ARCHFLAGS="-DWIN32_NO_DLL -DHAVE_STRUCT_TIMESPEC -fpermissive -w"
+ABCMKARGS += LIBS="lib/x86/pthreadVC2.lib -s" ABC_USE_NO_READLINE=1 CC="/usr/local/src/mxe/usr/bin/i686-w64-mingw32.static-gcc"
 EXE = .exe
 
 else ifeq ($(CONFIG),msys2)
@@ -217,11 +237,22 @@ CXXFLAGS := $(filter-out -fPIC,$(CXXFLAGS))
 LDFLAGS := $(filter-out -rdynamic,$(LDFLAGS)) -s
 LDLIBS := $(filter-out -lrt,$(LDLIBS))
 ABCMKARGS += ARCHFLAGS="-DABC_USE_STDINT_H -DWIN32_NO_DLL -DHAVE_STRUCT_TIMESPEC -fpermissive -w"
-ABCMKARGS += LIBS="lib/x86/pthreadVC2.lib -s" ABC_USE_NO_READLINE=0
+ABCMKARGS += LIBS="-lpthread -s" ABC_USE_NO_READLINE=0 CC="i686-w64-mingw32-gcc" CXX="$(CXX)"
+EXE = .exe
+
+else ifeq ($(CONFIG),msys2-64)
+CXX = x86_64-w64-mingw32-g++
+LD = x86_64-w64-mingw32-g++
+CXXFLAGS += -std=c++11 -Os -D_POSIX_SOURCE -DYOSYS_WIN32_UNIX_DIR
+CXXFLAGS := $(filter-out -fPIC,$(CXXFLAGS))
+LDFLAGS := $(filter-out -rdynamic,$(LDFLAGS)) -s
+LDLIBS := $(filter-out -lrt,$(LDLIBS))
+ABCMKARGS += ARCHFLAGS="-DABC_USE_STDINT_H -DWIN32_NO_DLL -DHAVE_STRUCT_TIMESPEC -fpermissive -w"
+ABCMKARGS += LIBS="-lpthread -s" ABC_USE_NO_READLINE=0 CC="x86_64-w64-mingw32-gcc" CXX="$(CXX)"
 EXE = .exe
 
 else ifneq ($(CONFIG),none)
-$(error Invalid CONFIG setting '$(CONFIG)'. Valid values: clang, gcc, gcc-4.8, emcc, mxe, msys2)
+$(error Invalid CONFIG setting '$(CONFIG)'. Valid values: clang, gcc, gcc-4.8, emcc, mxe, msys2, msys2-64)
 endif
 
 ifeq ($(ENABLE_LIBYOSYS),1)
@@ -286,6 +317,11 @@ else
 LDLIBS += $(shell PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) $(PKG_CONFIG) --silence-errors --libs tcl || echo -l$(TCL_VERSION))
 endif
 endif
+endif
+
+ifeq ($(ENABLE_GCOV),1)
+CXXFLAGS += --coverage
+LDFLAGS += --coverage
 endif
 
 ifeq ($(ENABLE_GPROF),1)
@@ -555,6 +591,14 @@ vloghtb: $(TARGETS) $(EXTRA_TARGETS)
 	@echo "  Passed \"make vloghtb\"."
 	@echo ""
 
+ystests: $(TARGETS) $(EXTRA_TARGETS)
+	rm -rf tests/ystests
+	git clone https://github.com/YosysHQ/yosys-tests.git tests/ystests
+	+PATH="$$PWD:$$PATH" cd tests/ystests && $(MAKE)
+	@echo ""
+	@echo "  Finished \"make ystests\"."
+	@echo ""
+
 # Unit test
 unit-test: libyosys.so
 	@$(MAKE) -C $(UNITESTPATH) CXX="$(CXX)" CPPFLAGS="$(CPPFLAGS)" \
@@ -620,6 +664,12 @@ clean-abc:
 mrproper: clean
 	git clean -xdf
 
+coverage:
+	./yosys -qp 'help; help -all'
+	rm -rf coverage.info coverage_html
+	lcov --capture -d . --no-external -o coverage.info
+	genhtml coverage.info --output-directory coverage_html
+
 qtcreator:
 	{ for file in $(basename $(OBJS)); do \
 		for prefix in cc y l; do if [ -f $${file}.$${prefix} ]; then echo $$file.$${prefix}; fi; done \
@@ -659,6 +709,12 @@ config-clang: clean
 config-gcc: clean
 	echo 'CONFIG := gcc' > Makefile.conf
 
+config-gcc-static: clean
+	echo 'CONFIG := gcc-static' > Makefile.conf
+	echo 'ENABLE_PLUGINS := 0' >> Makefile.conf
+	echo 'ENABLE_READLINE := 0' >> Makefile.conf
+	echo 'ENABLE_TCL := 0' >> Makefile.conf
+
 config-gcc-4.8: clean
 	echo 'CONFIG := gcc-4.8' > Makefile.conf
 
@@ -675,6 +731,17 @@ config-mxe: clean
 
 config-msys2: clean
 	echo 'CONFIG := msys2' > Makefile.conf
+
+config-msys2-64: clean
+	echo 'CONFIG := msys2-64' > Makefile.conf
+
+config-cygwin: clean
+	echo 'CONFIG := cygwin' > Makefile.conf
+
+config-gcov: clean
+	echo 'CONFIG := gcc' > Makefile.conf
+	echo 'ENABLE_GCOV := 1' >> Makefile.conf
+	echo 'ENABLE_DEBUG := 1' >> Makefile.conf
 
 config-gprof: clean
 	echo 'CONFIG := gcc' > Makefile.conf
@@ -696,6 +763,6 @@ echo-git-rev:
 -include kernel/*.d
 -include techlibs/*/*.d
 
-.PHONY: all top-all abc test install install-abc manual clean mrproper qtcreator
-.PHONY: config-clean config-clang config-gcc config-gcc-4.8 config-gprof config-sudo
+.PHONY: all top-all abc test install install-abc manual clean mrproper qtcreator coverage vcxsrc mxebin
+.PHONY: config-clean config-clang config-gcc config-gcc-static config-gcc-4.8 config-gprof config-sudo
 

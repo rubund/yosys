@@ -58,7 +58,8 @@ namespace VERILOG_FRONTEND {
 	bool do_not_require_port_stubs;
 	bool default_nettype_wire;
 	bool sv_mode, formal_mode, lib_mode;
-	bool norestrict_mode, assume_asserts_mode;
+	bool noassert_mode, noassume_mode, norestrict_mode;
+	bool assume_asserts_mode, assert_assumes_mode;
 	bool current_wire_rand, current_wire_const;
 	std::istream *lexin;
 }
@@ -106,7 +107,7 @@ static void free_attr(std::map<std::string, AstNode*> *al)
 %token TOK_MODULE TOK_ENDMODULE TOK_PARAMETER TOK_LOCALPARAM TOK_DEFPARAM
 %token TOK_PACKAGE TOK_ENDPACKAGE TOK_PACKAGESEP
 %token TOK_INTERFACE TOK_ENDINTERFACE TOK_MODPORT
-%token TOK_INPUT TOK_OUTPUT TOK_INOUT TOK_WIRE TOK_REG
+%token TOK_INPUT TOK_OUTPUT TOK_INOUT TOK_WIRE TOK_REG TOK_LOGIC
 %token TOK_INTEGER TOK_SIGNED TOK_ASSIGN TOK_ALWAYS TOK_INITIAL
 %token TOK_BEGIN TOK_END TOK_IF TOK_ELSE TOK_FOR TOK_WHILE TOK_REPEAT
 %token TOK_DPI_FUNCTION TOK_POSEDGE TOK_NEGEDGE TOK_OR TOK_AUTOMATIC
@@ -420,9 +421,10 @@ wire_type:
 	};
 
 wire_type_token_list:
-	wire_type_token | wire_type_token_list wire_type_token;
+	wire_type_token | wire_type_token_list wire_type_token |
+	wire_type_token_io ;
 
-wire_type_token:
+wire_type_token_io:
 	TOK_INPUT {
 		astbuf3->is_input = true;
 	} |
@@ -432,11 +434,16 @@ wire_type_token:
 	TOK_INOUT {
 		astbuf3->is_input = true;
 		astbuf3->is_output = true;
-	} |
+	};
+
+wire_type_token:
 	TOK_WIRE {
 	} |
 	TOK_REG {
 		astbuf3->is_reg = true;
+	} |
+	TOK_LOGIC {
+		astbuf3->is_logic = true;
 	} |
 	TOK_INTEGER {
 		astbuf3->is_reg = true;
@@ -589,6 +596,7 @@ task_func_decl:
 		AstNode *outreg = new AstNode(AST_WIRE);
 		outreg->str = *$6;
 		outreg->is_signed = $4;
+		outreg->is_reg = true;
 		if ($5 != NULL) {
 			outreg->children.push_back($5);
 			outreg->is_signed = $4 || $5->is_signed;
@@ -691,7 +699,7 @@ specify_item:
 	// | pulsestyle_declaration
 	// | showcancelled_declaration
 	| path_declaration
-	// | system_timing_declaration
+	| system_timing_declaration
 	;
 
 specparam_declaration:
@@ -719,22 +727,23 @@ showcancelled_declaration :
 */
 
 path_declaration :
-	simple_path_declaration
+	simple_path_declaration ';'
 	// | edge_sensitive_path_declaration
 	// | state_dependent_path_declaration
 	;
 
 simple_path_declaration :
-	parallel_path_description '=' path_delay_value ';'
-	// | full_path_description '=' path_delay_value ';'
+	parallel_path_description '=' path_delay_value |
+	full_path_description '=' path_delay_value
 	;
 
 path_delay_value :
-	//list_of_path_delay_expressions
-	'(' list_of_path_delay_expressions ')'
+	'(' path_delay_expression list_of_path_delay_extra_expressions ')'
+	|     path_delay_expression
+	|     path_delay_expression list_of_path_delay_extra_expressions
 	;
 
-list_of_path_delay_expressions :
+list_of_path_delay_extra_expressions :
 /*
 	t_path_delay_expression
 	| trise_path_delay_expression ',' tfall_path_delay_expression
@@ -746,12 +755,11 @@ list_of_path_delay_expressions :
 	  t0x_path_delay_expression ',' tx1_path_delay_expression ',' t1x_path_delay_expression ','
 	  tx0_path_delay_expression ',' txz_path_delay_expression ',' tzx_path_delay_expression
 */
-	path_delay_expression
-	| path_delay_expression ',' path_delay_expression
-	| path_delay_expression ',' path_delay_expression ',' path_delay_expression
-	| path_delay_expression ',' path_delay_expression ',' path_delay_expression ','
+	',' path_delay_expression
+	|  ',' path_delay_expression ',' path_delay_expression
+	|  ',' path_delay_expression ',' path_delay_expression ','
 	  path_delay_expression ',' path_delay_expression ',' path_delay_expression
-	| path_delay_expression ',' path_delay_expression ',' path_delay_expression ','
+	|  ',' path_delay_expression ',' path_delay_expression ','
 	  path_delay_expression ',' path_delay_expression ',' path_delay_expression ','
 	  path_delay_expression ',' path_delay_expression ',' path_delay_expression ','
 	  path_delay_expression ',' path_delay_expression ',' path_delay_expression
@@ -760,6 +768,22 @@ list_of_path_delay_expressions :
 parallel_path_description :
 	'(' specify_input_terminal_descriptor opt_polarity_operator '=' '>' specify_output_terminal_descriptor ')' ;
 
+full_path_description :
+	'(' list_of_path_inputs '*' '>' list_of_path_outputs ')' ;
+
+// This was broken into 2 rules to solve shift/reduce conflicts
+list_of_path_inputs :
+	specify_input_terminal_descriptor                  opt_polarity_operator  |
+	specify_input_terminal_descriptor more_path_inputs opt_polarity_operator ;
+
+more_path_inputs :
+    ',' specify_input_terminal_descriptor |
+    more_path_inputs ',' specify_input_terminal_descriptor ;
+
+list_of_path_outputs :
+	specify_output_terminal_descriptor |
+	list_of_path_outputs ',' specify_output_terminal_descriptor ;
+	
 opt_polarity_operator :
 	'+'
 	| '-'
@@ -773,11 +797,18 @@ specify_input_terminal_descriptor :
 specify_output_terminal_descriptor :
 	TOK_ID ;
 
-/*
 system_timing_declaration :
-	;
-*/
+	TOK_ID '(' system_timing_args ')' ';' ;
 
+system_timing_arg :
+	TOK_POSEDGE TOK_ID |
+	TOK_NEGEDGE TOK_ID |
+	expr ;
+
+system_timing_args :
+	system_timing_arg |
+	system_timing_args ',' system_timing_arg ;
+ 
 /*
 t_path_delay_expression :
 	path_delay_expression;
@@ -829,7 +860,7 @@ tzx_path_delay_expression :
 */
 
 path_delay_expression :
-	constant_mintypmax_expression;
+	constant_expression;
 
 constant_mintypmax_expression :
 	constant_expression
@@ -895,9 +926,15 @@ param_decl_list:
 
 single_param_decl:
 	TOK_ID '=' expr {
-		if (astbuf1 == nullptr)
-			frontend_verilog_yyerror("syntax error");
-		AstNode *node = astbuf1->clone();
+		AstNode *node;
+		if (astbuf1 == nullptr) {
+			if (!sv_mode)
+				frontend_verilog_yyerror("syntax error");
+			node = new AstNode(AST_PARAMETER);
+			node->children.push_back(AstNode::mkconst_int(0, true));
+		} else {
+			node = astbuf1->clone();
+		}
 		node->str = *$1;
 		delete node->children[0];
 		node->children[0] = $3;
@@ -1068,6 +1105,7 @@ wire_name:
 				node->port_id = current_function_or_task_port_id++;
 		}
 		ast_stack.back()->children.push_back(node);
+
 		delete $1;
 	};
 
@@ -1304,16 +1342,28 @@ modport_type_token:
 
 assert:
 	opt_stmt_label TOK_ASSERT opt_property '(' expr ')' ';' {
-		ast_stack.back()->children.push_back(new AstNode(assume_asserts_mode ? AST_ASSUME : AST_ASSERT, $5));
+		if (noassert_mode)
+			delete $5;
+		else
+			ast_stack.back()->children.push_back(new AstNode(assume_asserts_mode ? AST_ASSUME : AST_ASSERT, $5));
 	} |
 	opt_stmt_label TOK_ASSUME opt_property '(' expr ')' ';' {
-		ast_stack.back()->children.push_back(new AstNode(AST_ASSUME, $5));
+		if (noassume_mode)
+			delete $5;
+		else
+			ast_stack.back()->children.push_back(new AstNode(assert_assumes_mode ? AST_ASSERT : AST_ASSUME, $5));
 	} |
 	opt_stmt_label TOK_ASSERT opt_property '(' TOK_EVENTUALLY expr ')' ';' {
-		ast_stack.back()->children.push_back(new AstNode(assume_asserts_mode ? AST_FAIR : AST_LIVE, $6));
+		if (noassert_mode)
+			delete $6;
+		else
+			ast_stack.back()->children.push_back(new AstNode(assume_asserts_mode ? AST_FAIR : AST_LIVE, $6));
 	} |
 	opt_stmt_label TOK_ASSUME opt_property '(' TOK_EVENTUALLY expr ')' ';' {
-		ast_stack.back()->children.push_back(new AstNode(AST_FAIR, $6));
+		if (noassume_mode)
+			delete $6;
+		else
+			ast_stack.back()->children.push_back(new AstNode(assert_assumes_mode ? AST_LIVE : AST_FAIR, $6));
 	} |
 	opt_stmt_label TOK_COVER opt_property '(' expr ')' ';' {
 		ast_stack.back()->children.push_back(new AstNode(AST_COVER, $5));

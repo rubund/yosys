@@ -64,6 +64,7 @@ YOSYS_NAMESPACE_BEGIN
 int verific_verbose;
 bool verific_import_pending;
 string verific_error_msg;
+int verific_sva_fsm_limit;
 
 vector<string> verific_incdirs, verific_libdirs;
 
@@ -115,6 +116,18 @@ RTLIL::SigBit VerificImporter::net_map_at(Net *net)
 				get_full_netlist_name(net->Owner()).c_str(), net->Name(), get_full_netlist_name(netlist).c_str());
 
 	return net_map.at(net);
+}
+
+bool is_blackbox(Netlist *nl)
+{
+	if (nl->IsBlackBox())
+		return true;
+
+	const char *attr = nl->GetAttValue("blackbox");
+	if (attr != nullptr && strcmp(attr, "0"))
+		return true;
+
+	return false;
 }
 
 void VerificImporter::import_attributes(dict<RTLIL::IdString, RTLIL::Const> &attributes, DesignObj *obj)
@@ -708,7 +721,7 @@ void VerificImporter::import_netlist(RTLIL::Design *design, Netlist *nl, std::se
 	netlist = nl;
 
 	if (design->has(module_name)) {
-		if (!nl->IsOperator())
+		if (!nl->IsOperator() && !is_blackbox(nl))
 			log_cmd_error("Re-definition of module `%s'.\n", nl->Owner()->Name());
 		return;
 	}
@@ -717,7 +730,7 @@ void VerificImporter::import_netlist(RTLIL::Design *design, Netlist *nl, std::se
 	module->name = module_name;
 	design->add(module);
 
-	if (nl->IsBlackBox()) {
+	if (is_blackbox(nl)) {
 		log("Importing blackbox module %s.\n", RTLIL::id2cstr(module->name));
 		module->set_bool_attribute("\\blackbox");
 	} else {
@@ -1618,6 +1631,8 @@ struct VerificExtNets
 
 void verific_import(Design *design, std::string top)
 {
+	verific_sva_fsm_limit = 16;
+
 	std::set<Netlist*> nl_todo, nl_done;
 
 	{
@@ -1673,6 +1688,7 @@ YOSYS_NAMESPACE_END
 
 PRIVATE_NAMESPACE_BEGIN
 
+#ifdef YOSYS_ENABLE_VERIFIC
 bool check_noverific_env()
 {
 	const char *e = getenv("YOSYS_NOVERIFIC");
@@ -1682,10 +1698,11 @@ bool check_noverific_env()
 		return false;
 	return true;
 }
+#endif
 
 struct VerificPass : public Pass {
 	VerificPass() : Pass("verific", "load Verilog and VHDL designs using Verific") { }
-	virtual void help()
+	void help() YS_OVERRIDE
 	{
 		//   |---v---|---v---|---v---|---v---|---v---|---v---|---v---|---v---|---v---|---v---|
 		log("\n");
@@ -1706,9 +1723,16 @@ struct VerificPass : public Pass {
 		log("\n");
 		log("Like -sv, but define FORMAL instead of SYNTHESIS.\n");
 		log("\n");
+		log("\n");
 		log("    verific {-vhdl87|-vhdl93|-vhdl2k|-vhdl2008|-vhdl} <vhdl-file>..\n");
 		log("\n");
 		log("Load the specified VHDL files into Verific.\n");
+		log("\n");
+		log("\n");
+		log("    verific -work <libname> {-sv|-vhdl|...} <hdl-file>\n");
+		log("\n");
+		log("Load the specified Verilog/SystemVerilog/VHDL file into the specified library.\n");
+		log("(default library when -work is not present: \"work\")\n");
 		log("\n");
 		log("\n");
 		log("    verific -vlog-incdir <directory>..\n");
@@ -1730,6 +1754,15 @@ struct VerificPass : public Pass {
 		log("    verific -vlog-undef <macro>..\n");
 		log("\n");
 		log("Remove Verilog defines previously set with -vlog-define.\n");
+		log("\n");
+		log("\n");
+		log("    verific -set-error <msg_id>..\n");
+		log("    verific -set-warning <msg_id>..\n");
+		log("    verific -set-info <msg_id>..\n");
+		log("    verific -set-ignore <msg_id>..\n");
+		log("\n");
+		log("Set message severity. <msg_id> is the string in square brackets when a message\n");
+		log("is printed, such as VERI-1209.\n");
 		log("\n");
 		log("\n");
 		log("    verific -import [options] <top-module>..\n");
@@ -1773,6 +1806,9 @@ struct VerificPass : public Pass {
 		log("  -nosva\n");
 		log("    Ignore SVA properties, do not infer checker logic.\n");
 		log("\n");
+		log("  -L <int>\n");
+		log("    Maximum number of ctrl bits for SVA checker FSMs (default=16).\n");
+		log("\n");
 		log("  -n\n");
 		log("    Keep all Verific names on instances and nets. By default only\n");
 		log("    user-declared names are preserved.\n");
@@ -1784,26 +1820,37 @@ struct VerificPass : public Pass {
 		log("\n");
 	}
 #ifdef YOSYS_ENABLE_VERIFIC
-	virtual void execute(std::vector<std::string> args, RTLIL::Design *design)
+	void execute(std::vector<std::string> args, RTLIL::Design *design) YS_OVERRIDE
 	{
+		static bool set_verific_global_flags = true;
+
 		if (check_noverific_env())
 			log_cmd_error("This version of Yosys is built without Verific support.\n");
 
 		log_header(design, "Executing VERIFIC (loading SystemVerilog and VHDL designs using Verific).\n");
 
-		Message::SetConsoleOutput(0);
-		Message::RegisterCallBackMsg(msg_func);
-		RuntimeFlags::SetVar("db_preserve_user_nets", 1);
-		RuntimeFlags::SetVar("db_allow_external_nets", 1);
-		RuntimeFlags::SetVar("vhdl_ignore_assertion_statements", 0);
-		RuntimeFlags::SetVar("veri_extract_dualport_rams", 0);
-		RuntimeFlags::SetVar("veri_extract_multiport_rams", 1);
-		RuntimeFlags::SetVar("db_infer_wide_operators", 1);
+		if (set_verific_global_flags)
+		{
+			Message::SetConsoleOutput(0);
+			Message::RegisterCallBackMsg(msg_func);
+			RuntimeFlags::SetVar("db_preserve_user_nets", 1);
+			RuntimeFlags::SetVar("db_allow_external_nets", 1);
+			RuntimeFlags::SetVar("vhdl_ignore_assertion_statements", 0);
+			RuntimeFlags::SetVar("veri_extract_dualport_rams", 0);
+			RuntimeFlags::SetVar("veri_extract_multiport_rams", 1);
+			RuntimeFlags::SetVar("db_infer_wide_operators", 1);
 
-		// WARNING: instantiating unknown module 'XYZ' (VERI-1063)
-		Message::SetMessageType("VERI-1063", VERIFIC_ERROR);
+			// Workaround for VIPER #13851
+			RuntimeFlags::SetVar("veri_create_name_for_unnamed_gen_block", 1);
+
+			// WARNING: instantiating unknown module 'XYZ' (VERI-1063)
+			Message::SetMessageType("VERI-1063", VERIFIC_ERROR);
+
+			set_verific_global_flags = false;
+		}
 
 		verific_verbose = 0;
+		verific_sva_fsm_limit = 16;
 
 		const char *release_str = Message::ReleaseString();
 		time_t release_time = Message::ReleaseDate();
@@ -1818,6 +1865,29 @@ struct VerificPass : public Pass {
 		log("Built with Verific %s, released at %s.\n", release_str, release_tmstr);
 
 		int argidx = 1;
+		std::string work = "work";
+
+		if (GetSize(args) > argidx && (args[argidx] == "-set-error" || args[argidx] == "-set-warning" ||
+				args[argidx] == "-set-info" || args[argidx] == "-set-ignore"))
+		{
+			msg_type_t new_type;
+
+			if (args[argidx] == "-set-error")
+				new_type = VERIFIC_ERROR;
+			else if (args[argidx] == "-set-warning")
+				new_type = VERIFIC_WARNING;
+			else if (args[argidx] == "-set-info")
+				new_type = VERIFIC_INFO;
+			else if (args[argidx] == "-set-ignore")
+				new_type = VERIFIC_IGNORE;
+			else
+				log_abort();
+
+			for (argidx++; argidx < GetSize(args); argidx++)
+				Message::SetMessageType(args[argidx].c_str(), new_type);
+
+			goto check_error;
+		}
 
 		if (GetSize(args) > argidx && args[argidx] == "-vlog-incdir") {
 			for (argidx++; argidx < GetSize(args); argidx++)
@@ -1852,6 +1922,15 @@ struct VerificPass : public Pass {
 				veri_file::UndefineMacro(name.c_str());
 			}
 			goto check_error;
+		}
+
+		for (; argidx < GetSize(args); argidx++)
+		{
+			if (args[argidx] == "-work" && argidx+1 < GetSize(args)) {
+				work = args[++argidx];
+				continue;
+			}
+			break;
 		}
 
 		if (GetSize(args) > argidx && (args[argidx] == "-vlog95" || args[argidx] == "-vlog2k" || args[argidx] == "-sv2005" ||
@@ -1901,7 +1980,7 @@ struct VerificPass : public Pass {
 			while (argidx < GetSize(args))
 				file_names.Insert(args[argidx++].c_str());
 
-			if (!veri_file::AnalyzeMultipleFiles(&file_names, verilog_mode, "work", veri_file::MFCU))
+			if (!veri_file::AnalyzeMultipleFiles(&file_names, verilog_mode, work.c_str(), veri_file::MFCU))
 					log_cmd_error("Reading Verilog/SystemVerilog sources failed.\n");
 
 			verific_import_pending = true;
@@ -1911,7 +1990,7 @@ struct VerificPass : public Pass {
 		if (GetSize(args) > argidx && args[argidx] == "-vhdl87") {
 			vhdl_file::SetDefaultLibraryPath((proc_share_dirname() + "verific/vhdl_vdbs_1987").c_str());
 			for (argidx++; argidx < GetSize(args); argidx++)
-				if (!vhdl_file::Analyze(args[argidx].c_str(), "work", vhdl_file::VHDL_87))
+				if (!vhdl_file::Analyze(args[argidx].c_str(), work.c_str(), vhdl_file::VHDL_87))
 					log_cmd_error("Reading `%s' in VHDL_87 mode failed.\n", args[argidx].c_str());
 			verific_import_pending = true;
 			goto check_error;
@@ -1920,7 +1999,7 @@ struct VerificPass : public Pass {
 		if (GetSize(args) > argidx && args[argidx] == "-vhdl93") {
 			vhdl_file::SetDefaultLibraryPath((proc_share_dirname() + "verific/vhdl_vdbs_1993").c_str());
 			for (argidx++; argidx < GetSize(args); argidx++)
-				if (!vhdl_file::Analyze(args[argidx].c_str(), "work", vhdl_file::VHDL_93))
+				if (!vhdl_file::Analyze(args[argidx].c_str(), work.c_str(), vhdl_file::VHDL_93))
 					log_cmd_error("Reading `%s' in VHDL_93 mode failed.\n", args[argidx].c_str());
 			verific_import_pending = true;
 			goto check_error;
@@ -1929,7 +2008,7 @@ struct VerificPass : public Pass {
 		if (GetSize(args) > argidx && args[argidx] == "-vhdl2k") {
 			vhdl_file::SetDefaultLibraryPath((proc_share_dirname() + "verific/vhdl_vdbs_1993").c_str());
 			for (argidx++; argidx < GetSize(args); argidx++)
-				if (!vhdl_file::Analyze(args[argidx].c_str(), "work", vhdl_file::VHDL_2K))
+				if (!vhdl_file::Analyze(args[argidx].c_str(), work.c_str(), vhdl_file::VHDL_2K))
 					log_cmd_error("Reading `%s' in VHDL_2K mode failed.\n", args[argidx].c_str());
 			verific_import_pending = true;
 			goto check_error;
@@ -1938,7 +2017,7 @@ struct VerificPass : public Pass {
 		if (GetSize(args) > argidx && (args[argidx] == "-vhdl2008" || args[argidx] == "-vhdl")) {
 			vhdl_file::SetDefaultLibraryPath((proc_share_dirname() + "verific/vhdl_vdbs_2008").c_str());
 			for (argidx++; argidx < GetSize(args); argidx++)
-				if (!vhdl_file::Analyze(args[argidx].c_str(), "work", vhdl_file::VHDL_2008))
+				if (!vhdl_file::Analyze(args[argidx].c_str(), work.c_str(), vhdl_file::VHDL_2008))
 					log_cmd_error("Reading `%s' in VHDL_2008 mode failed.\n", args[argidx].c_str());
 			verific_import_pending = true;
 			goto check_error;
@@ -1976,6 +2055,10 @@ struct VerificPass : public Pass {
 				}
 				if (args[argidx] == "-nosva") {
 					mode_nosva = true;
+					continue;
+				}
+				if (args[argidx] == "-L" && argidx+1 < GetSize(args)) {
+					verific_sva_fsm_limit = atoi(args[++argidx].c_str());
 					continue;
 				}
 				if (args[argidx] == "-n") {
@@ -2048,8 +2131,8 @@ struct VerificPass : public Pass {
 #else
 				log("Running hier_tree::ElaborateAll().\n");
 
-				VhdlLibrary *vhdl_lib = vhdl_file::GetLibrary("work", 1);
-				VeriLibrary *veri_lib = veri_file::GetLibrary("work", 1);
+				VhdlLibrary *vhdl_lib = vhdl_file::GetLibrary(work.c_str(), 1);
+				VeriLibrary *veri_lib = veri_file::GetLibrary(work.c_str(), 1);
 
 				Array veri_libs, vhdl_libs;
 				if (vhdl_lib) vhdl_libs.InsertLast(vhdl_lib);
@@ -2096,7 +2179,7 @@ struct VerificPass : public Pass {
 						continue;
 					}
 
-					VhdlLibrary *vhdl_lib = vhdl_file::GetLibrary("work", 1);
+					VhdlLibrary *vhdl_lib = vhdl_file::GetLibrary(work.c_str(), 1);
 					VhdlDesignUnit *vhdl_unit = vhdl_lib->GetPrimUnit(name);
 					if (vhdl_unit) {
 						log("Adding VHDL unit '%s' to elaboration queue.\n", name);
@@ -2165,7 +2248,7 @@ struct VerificPass : public Pass {
 
 	}
 #else /* YOSYS_ENABLE_VERIFIC */
-	virtual void execute(std::vector<std::string>, RTLIL::Design *) {
+	void execute(std::vector<std::string>, RTLIL::Design *) YS_OVERRIDE {
 		log_cmd_error("This version of Yosys is built without Verific support.\n");
 	}
 #endif
@@ -2173,7 +2256,7 @@ struct VerificPass : public Pass {
 
 struct ReadPass : public Pass {
 	ReadPass() : Pass("read", "load HDL designs") { }
-	virtual void help()
+	void help() YS_OVERRIDE
 	{
 		//   |---v---|---v---|---v---|---v---|---v---|---v---|---v---|---v---|---v---|---v---|
 		log("\n");
@@ -2206,7 +2289,7 @@ struct ReadPass : public Pass {
 		log("Add directory to global Verilog/SystemVerilog include directories.\n");
 		log("\n");
 	}
-	virtual void execute(std::vector<std::string> args, RTLIL::Design *design)
+	void execute(std::vector<std::string> args, RTLIL::Design *design) YS_OVERRIDE
 	{
 		if (args.size() < 2)
 			log_cmd_error("Missing mode parameter.\n");

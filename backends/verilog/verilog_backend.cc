@@ -779,6 +779,19 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 		return true;
 	}
 
+	if (cell->type == "$lut")
+	{
+		f << stringf("%s" "assign ", indent.c_str());
+		dump_sigspec(f, cell->getPort("\\Y"));
+		f << stringf(" = ");
+		dump_const(f, cell->parameters.at("\\LUT"));
+		f << stringf(" >> ");
+		dump_attributes(f, "", cell->attributes, ' ');
+		dump_sigspec(f, cell->getPort("\\A"));
+		f << stringf(";\n");
+		return true;
+	}
+
 	if (cell->type == "$dffsr")
 	{
 		SigSpec sig_clk = cell->getPort("\\CLK");
@@ -1482,7 +1495,7 @@ void dump_module(std::ostream &f, std::string indent, RTLIL::Module *module)
 
 struct VerilogBackend : public Backend {
 	VerilogBackend() : Backend("verilog", "write design to Verilog file") { }
-	virtual void help()
+	void help() YS_OVERRIDE
 	{
 		//   |---v---|---v---|---v---|---v---|---v---|---v---|---v---|---v---|---v---|---v---|
 		log("\n");
@@ -1510,7 +1523,7 @@ struct VerilogBackend : public Backend {
 		log("\n");
 		log("    -nodec\n");
 		log("        32-bit constant values are by default dumped as decimal numbers,\n");
-		log("        not bit pattern. This option decativates this feature and instead\n");
+		log("        not bit pattern. This option deactivates this feature and instead\n");
 		log("        will write out all constants in binary.\n");
 		log("\n");
 		log("    -decimal\n");
@@ -1518,13 +1531,13 @@ struct VerilogBackend : public Backend {
 		log("\n");
 		log("    -nohex\n");
 		log("        constant values that are compatible with hex output are usually\n");
-		log("        dumped as hex values. This option decativates this feature and\n");
+		log("        dumped as hex values. This option deactivates this feature and\n");
 		log("        instead will write out all constants in binary.\n");
 		log("\n");
 		log("    -nostr\n");
 		log("        Parameters and attributes that are specified as strings in the\n");
 		log("        original input will be output as strings by this back-end. This\n");
-		log("        decativates this feature and instead will write string constants\n");
+		log("        deactivates this feature and instead will write string constants\n");
 		log("        as binary numbers.\n");
 		log("\n");
 		log("    -defparam\n");
@@ -1550,7 +1563,7 @@ struct VerilogBackend : public Backend {
 		log("this command is called on a design with RTLIL processes.\n");
 		log("\n");
 	}
-	virtual void execute(std::ostream *&f, std::string filename, std::vector<std::string> args, RTLIL::Design *design)
+	void execute(std::ostream *&f, std::string filename, std::vector<std::string> args, RTLIL::Design *design) YS_OVERRIDE
 	{
 		log_header(design, "Executing Verilog backend.\n");
 

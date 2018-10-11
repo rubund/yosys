@@ -69,6 +69,10 @@ On FreeBSD use the following command to install all prerequisites:
 On FreeBSD system use gmake instead of make. To run tests use:
     % MAKE=gmake CC=cc gmake test
 
+For Cygwin use the following command to install all prerequisites, or select these additional packages:
+
+	setup-x86_64.exe -q --packages=bison,flex,gcc-core,gcc-g++,git,libffi-devel,libreadline-devel,make,pkg-config,python3,tcl-devel
+
 There are also pre-compiled Yosys binary packages for Ubuntu and Win32 as well
 as a source distribution for Visual Studio. Visit the Yosys download page for
 more information: http://www.clifford.at/yosys/download.html
@@ -389,7 +393,7 @@ Verilog Attributes and non-standard features
 Non-standard or SystemVerilog features for formal verification
 ==============================================================
 
-- Support for ``assert``, ``assume``, ``restrict``, and ``cover'' is enabled
+- Support for ``assert``, ``assume``, ``restrict``, and ``cover`` is enabled
   when ``read_verilog`` is called with ``-formal``.
 
 - The system task ``$initstate`` evaluates to 1 in the initial state and
