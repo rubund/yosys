@@ -461,7 +461,7 @@ int find_top_mod_score(Design *design, Module *module, dict<Module*, int> &db)
 
 RTLIL::Module *check_if_top_has_changed(Design *design, Module *top_mod)
 {
-	if(top_mod->get_bool_attribute("\\initial_top"))
+	if(top_mod != NULL && top_mod->get_bool_attribute("\\initial_top"))
 		return top_mod;
 	else {
 		for (auto mod : design->modules()) {
