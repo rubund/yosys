@@ -1069,6 +1069,7 @@ void AST::process(RTLIL::Design *design, AstNode *ast, bool dump_ast1, bool dump
 					design->remove(existing_mod);
 				}
 			}
+
 			design->add(process_module(*it, defer));
 		}
 		else if ((*it)->type == AST_PACKAGE)
