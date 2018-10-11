@@ -1137,7 +1137,7 @@ RTLIL::IdString AstModule::derive(RTLIL::Design *design, dict<RTLIL::IdString, R
 
 	bool has_interfaces = false;
 	for(auto &intf : interfaces) {
-		interf_info += log_id(intf.first);
+		interf_info += log_id(intf.second);
 		has_interfaces = true;
 	}
 
