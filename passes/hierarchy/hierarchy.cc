@@ -382,7 +382,7 @@ bool expand_module(RTLIL::Design *design, RTLIL::Module *module, bool flag_check
 
 			// We add all the signals of the interface explicitly to the parent module. This is always needed when we encounter
 			// an interface instance:
-			if (mod->get_bool_attribute("\\is_interface") && cell->get_bool_attribute("\\interfaces_not_handled")) {
+			if (mod->get_bool_attribute("\\is_interface") && cell->get_bool_attribute("\\interfaces_not_handled") && !module->get_bool_attribute("\\reprocessed")) {
 
 				//ReconnectWorker reconnectWorker;
 				//reconnectWorker.module = module;
