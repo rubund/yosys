@@ -37,67 +37,6 @@ struct generate_port_decl_t {
 	int index;
 };
 
-struct ReconnectWorker
-{
-	std::vector<RTLIL::IdString> wires;
-
-	RTLIL::Module *module;
-
-	void add_wire_to_reconnect(RTLIL::IdString wire_name)
-	{
-		wires.push_back(wire_name);
-	}
-
-	void operator()(RTLIL::SigSpec &sig)
-	{
-		std::cout << "Start sigspec. bits: " << sig.bits().size() << ", chunks: " << sig.chunks().size() << std::endl;
-		RTLIL::Wire *current_wire = NULL;
-		int current_wire_width = -1;
-		int current_wire_index = -1;
-		for (RTLIL::SigBit &bit : sig){
-			if (bit.wire != NULL) {
-				for(unsigned int i=0;i<wires.size();i++) {
-					if (wires[i] == bit.wire->name) {
-						if (module->wires_.count(bit.wire->name) > 0) {
-							RTLIL::Wire *next_wire;
-							next_wire = module->wire(bit.wire->name);
-							if (next_wire != current_wire) {
-								current_wire_index = bit.offset+1;
-							}
-							else {
-								current_wire_index++;
-							}
-							current_wire = module->wire(bit.wire->name);
-							current_wire_width = current_wire->width;
-							bit.wire = current_wire;
-							std::cout << "Reconnecting " << log_id(bit.wire->name) << std::endl;
-						}
-						else {
-							printf("Not found wire to reconnect\n");
-						}
-						break;
-					}
-				}
-				std::cout << "found: "  << log_id(bit.wire->name) << ", offset: " << bit.offset << std::endl;
-			}
-			else {
-				std::cout << "found without name" << std::endl;
-				if (current_wire != NULL) {
-					if (current_wire_index < current_wire_width) {
-						printf("ok\n");
-						bit.wire = current_wire;
-						bit.offset = current_wire_index;
-						current_wire_index++;
-					}
-					else {
-						current_wire = NULL;
-					}
-				}
-			}
-		}
-		std::cout << "Stop sigspec" << std::endl;
-	}
-};
 
 void generate(RTLIL::Design *design, const std::vector<std::string> &celltypes, const std::vector<generate_port_decl_t> &portdecls)
 {
@@ -398,35 +337,8 @@ bool expand_module(RTLIL::Design *design, RTLIL::Module *module, bool flag_check
 			if (mod->get_bool_attribute("\\is_interface") && cell->get_bool_attribute("\\interfaces_not_handled")) {
 				printf("is interface and interface not handled\n");
 				cell->set_bool_attribute("\\is_interface");
-				//ReconnectWorker reconnectWorker;
-				//reconnectWorker.module = module;
-				//std::vector<RTLIL::Wire*> wires_to_delete;
-				//module->interfaces_[cell->name] = cell;
 				RTLIL::Module *derived_module = design->modules_[cell->type];
 				interfaces_in_module[cell->name] = derived_module;
-				//for (auto &mod_wire : derived_module->wires_) {
-				//	std::string signal_name = "\\" + std::string(log_id(cell->name)) + "." + std::string(log_id(mod_wire.first));
-				//	if (module->wires_.count(signal_name) == 0) {
-				//		module->addWire(signal_name, mod_wire.second);
-				//	}
-				//	else {
-				//		RTLIL::Wire *existing_wire = module->wire(signal_name);
-				//		int width = existing_wire->width;
-				//		int width2 = mod_wire.second->width;
-				//		if (width != width2) {
-				//			wires_to_delete.push_back(existing_wire);
-				//			module->wires_.erase(signal_name);
-				//			module->addWire(signal_name, mod_wire.second);
-				//			reconnectWorker.add_wire_to_reconnect(signal_name);
-				//		}
-				//	}
-				//}
-				//module->rewrite_sigspecs(reconnectWorker);
-				//for(unsigned int i=0;i<wires_to_delete.size();i++) {
-				//	//delete wires_to_delete[i]; FIXME: wires are proteced
-				//}
-				// We only need to do it once for every instantiation of an interface (and since we risk ending up here again due to
-				// 'did_something', we need to set 'cell->replaced_interface = true':
 				did_something = true;
 			}
 			cell->attributes.erase("\\interfaces_not_handled");
