@@ -1080,35 +1080,19 @@ void AstModule::reprocess_module(RTLIL::Design *design, dict<RTLIL::IdString, RT
 {
 	bool is_top = false;
 	AstNode *new_ast = ast->clone();
-    //for(size_t i=0;i<new_ast->children.size();i++) {
-    //   AstNode *ch = new_ast->children[i];
-    //    std::cout << " " << ch->str << std::endl;
-    //    std::cout << " " << ch->type << std::endl;
-    //    if (ch->type == AST_CELL){
-    //        for (auto &intf : local_interfaces) {
-    //            intfname = "\\" + intfname;
-    //            if (ch->str == intfname) {
-    //                new_ast->children.erase(new_ast->children.begin() + i);
-    //                i--;
-    //                break;
-    //            }
-    //        }
-    //    }
-    //}
-	// FIXME: add interface members to the AST tree 'new_ast' here.
-    for (auto &intf : local_interfaces) {
-        std::string intfname = log_id(intf.first);
-        intfname = "\\" + intfname;
-        RTLIL::Module *intfmodule = intf.second;
-        printf("Wires in interface:  %s\n", intfname.c_str());
-        for (auto &wire_it : intfmodule->wires_){
-            AstNode *wire = new AstNode(AST_WIRE, new AstNode(AST_RANGE, AstNode::mkconst_int(wire_it.second->width -1, true), AstNode::mkconst_int(0, true)));
-            std::string newname = log_id(wire_it.first);
-            newname = intfname + "." + newname;
-            wire->str = newname;
-            new_ast->children.push_back(wire);
-        }
-    }
+	for (auto &intf : local_interfaces) {
+		std::string intfname = log_id(intf.first);
+		intfname = "\\" + intfname;
+		RTLIL::Module *intfmodule = intf.second;
+		printf("Wires in interface:  %s\n", intfname.c_str());
+		for (auto &wire_it : intfmodule->wires_){
+			AstNode *wire = new AstNode(AST_WIRE, new AstNode(AST_RANGE, AstNode::mkconst_int(wire_it.second->width -1, true), AstNode::mkconst_int(0, true)));
+			std::string newname = log_id(wire_it.first);
+			newname = intfname + "." + newname;
+			wire->str = newname;
+			new_ast->children.push_back(wire);
+		}
+	}
 	std::string original_name = log_id(this->name);
 	std::string changed_name = "\\" + original_name + "_before_replacing_local_interfaces";
 	design->rename(this, changed_name);
@@ -1121,7 +1105,7 @@ void AstModule::reprocess_module(RTLIL::Design *design, dict<RTLIL::IdString, RT
 	RTLIL::Module* mod = design->module("\\" + original_name);
 	if (is_top)
 		mod->set_bool_attribute("\\top");
-    mod->set_bool_attribute("\\reprocessed");
+	mod->set_bool_attribute("\\reprocessed");
 }
 
 // create a new parametric module (when needed) and return the name of the generated module - WITH support for interfaces
@@ -1144,94 +1128,42 @@ RTLIL::IdString AstModule::derive(RTLIL::Design *design, dict<RTLIL::IdString, R
 	if (has_interfaces)
 		modname += "$interfaces$" + interf_info;
 
-	// FIXME: Add the new ports in the submodule before process_module instead.. (easier, do not need to reconnect things..)
 
 	if (!design->has(modname)) {
 		new_ast->str = modname;
 		for(auto &intf : interfaces) {
 			RTLIL::Module * intfmodule = intf.second; 
-            std::string intfname = log_id(intf.first);
-            intfname = "\\" + intfname;
-            for (auto &wire_it : intfmodule->wires_){
-                AstNode *wire = new AstNode(AST_WIRE, new AstNode(AST_RANGE, AstNode::mkconst_int(wire_it.second->width -1, true), AstNode::mkconst_int(0, true)));
-                std::string newname = log_id(wire_it.first);
-                newname = intfname + "." + newname;
-                wire->str = newname;
-                wire->is_input = true;
-                wire->is_output = true;
-                new_ast->children.push_back(wire);
-            }
-        }
+			std::string intfname = log_id(intf.first);
+			intfname = "\\" + intfname;
+			for (auto &wire_it : intfmodule->wires_){
+				AstNode *wire = new AstNode(AST_WIRE, new AstNode(AST_RANGE, AstNode::mkconst_int(wire_it.second->width -1, true), AstNode::mkconst_int(0, true)));
+				std::string newname = log_id(wire_it.first);
+				newname = intfname + "." + newname;
+				wire->str = newname;
+				wire->is_input = true;
+				wire->is_output = true;
+				new_ast->children.push_back(wire);
+			}
+		}
 
 		design->add(process_module(new_ast, false));
 		design->module(modname)->check();
 
 		RTLIL::Module* mod = design->module(modname);
-        mod->set_bool_attribute("\\reprocessed");
+		mod->set_bool_attribute("\\reprocessed");
 
 		for(auto &intf : interfaces) {
-            if(mod->wires_.count(intf.first)) {
-                mod->wires_.erase(intf.first);
-                mod->fixup_ports();
-                RTLIL::Cell * new_subcell = mod->addCell(intf.first, intf.second->name);
-                new_subcell->set_bool_attribute("\\is_interface");
-            }
-            else {
-                log_error("No port with matching name found (%s) in %s. Stopping\n", log_id(intf.first), modname);
-            }
-        }
+			if(mod->wires_.count(intf.first)) {
+				mod->wires_.erase(intf.first);
+				mod->fixup_ports();
+				RTLIL::Cell * new_subcell = mod->addCell(intf.first, intf.second->name);
+				new_subcell->set_bool_attribute("\\is_interface");
+			}
+			else {
+				log_error("No port with matching name found (%s) in %s. Stopping\n", log_id(intf.first), modname);
+			}
+		}
 
-        // FIXME Copy all cells (RTLIL::Cell) of interfaces in "interfaces" into "mod".
-
-		//for(auto &intf : interfaces) {
-		//	mod->interfaces_[intf.first] = intf.second;
-		//}
-
-		//for(auto &intf : interfaces_) {
-		//	RTLIL::Module * interface_module = design->module(intf.second->type);
-		//	int max_port_id = 0;
-		//	for(auto &w : mod->wires_) {
-		//		max_port_id = w.second->port_id > max_port_id ? w.second->port_id : max_port_id;
-		//	}
-		//	for(auto &w : interface_module->wires_){
-		//		max_port_id++;
-		//		std::string signal_name3 = "\\" + std::string(log_id(intf.first)) + "." + std::string(log_id(w.first));
-
-		//		// If signal with the same name already exists, we use the existing signal:
-		//		if (mod->wires_.count(signal_name3) == 0) {
-		//			RTLIL::Wire *new_wire = mod->addWire(RTLIL::IdString(signal_name3), w.second);
-		//			// Since support for modports is not implemented, we set the new signals to inout
-		//			new_wire->port_input = true; // XXX: handle modports
-		//			new_wire->port_output = true; // XXX: handle modports
-		//			new_wire->port_id = max_port_id;
-		//			mod->ports.push_back(signal_name3);
-		//		}
-		//		else {
-		//			RTLIL::Wire *existing_wire = mod->wire(signal_name3);
-		//			int width = existing_wire->width;
-		//			int width2 = w.second->width;
-		//			// Since support for modports is not implemented, we set the new signals to inout
-		//			if (width == width2) {
-		//				existing_wire->port_input = true; // XXX: handle modports
-		//				existing_wire->port_output = true; // XXX: handle modports
-		//				if (existing_wire->port_id <= 0) {
-		//					existing_wire->port_id = max_port_id;
-		//					mod->ports.push_back(signal_name3);
-		//				}
-		//			}
-		//			else {
-		//				mod->wires_.erase(signal_name3);
-		//				RTLIL::Wire *new_wire = mod->addWire(RTLIL::IdString(signal_name3), w.second);
-		//				// Since support for modports is not implemented, we set the new signals to inout
-		//				new_wire->port_input = true; // XXX: handle modports
-		//				new_wire->port_output = true; // XXX: handle modports
-		//				new_wire->port_id = max_port_id;
-		//				mod->ports.push_back(signal_name3);
-		//			}
-		//			
-		//		}
-		//	}
-		//}
 	} else {
 		log("Found cached RTLIL representation for module `%s'.\n", modname.c_str());
 	}
