@@ -1081,10 +1081,11 @@ void AstModule::reprocess_module(RTLIL::Design *design, dict<RTLIL::IdString, RT
 	bool is_top = false;
 	AstNode *new_ast = ast->clone();
     //for(size_t i=0;i<new_ast->children.size();i++) {
-    //    AstNode *ch = new_ast->children[i];
+    //   AstNode *ch = new_ast->children[i];
+    //    std::cout << " " << ch->str << std::endl;
+    //    std::cout << " " << ch->type << std::endl;
     //    if (ch->type == AST_CELL){
     //        for (auto &intf : local_interfaces) {
-    //            std::string intfname = log_id(intf.first);
     //            intfname = "\\" + intfname;
     //            if (ch->str == intfname) {
     //                new_ast->children.erase(new_ast->children.begin() + i);
@@ -1095,6 +1096,20 @@ void AstModule::reprocess_module(RTLIL::Design *design, dict<RTLIL::IdString, RT
     //    }
     //}
 	// FIXME: add interface members to the AST tree 'new_ast' here.
+    for (auto &intf : local_interfaces) {
+        std::string intfname = log_id(intf.first);
+        intfname = "\\" + intfname;
+        RTLIL::Module *intfmodule = intf.second;
+        printf("Wires in interface:  %s\n", intfname.c_str());
+        for (auto &wire_it : intfmodule->wires_){
+            std::cout << "    " << log_id(wire_it.first) << " width: " << wire_it.second->width << std::endl;
+            AstNode *wire = new AstNode(AST_WIRE, new AstNode(AST_RANGE, AstNode::mkconst_int(wire_it.second->width -1, true), AstNode::mkconst_int(0, true)));
+            std::string newname = log_id(wire_it.first);
+            newname = intfname + "." + newname;
+            wire->str = newname;
+            new_ast->children.push_back(wire);
+        }
+    }
 	std::string original_name = log_id(this->name);
 	std::cout << "original name: " << original_name << std::endl;
 	std::string changed_name = "\\" + original_name + "_before_replacing_local_interfaces";
