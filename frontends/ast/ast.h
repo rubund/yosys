@@ -287,7 +287,7 @@ namespace AST
 		bool nolatches, nomeminit, nomem2reg, mem2reg, lib, noopt, icells, autowire;
 		virtual ~AstModule();
 		virtual RTLIL::IdString derive(RTLIL::Design *design, dict<RTLIL::IdString, RTLIL::Const> parameters, bool mayfail);
-		virtual RTLIL::IdString derive(RTLIL::Design *design, dict<RTLIL::IdString, RTLIL::Const> parameters, dict<RTLIL::IdString, RTLIL::Cell*> interfaces, bool mayfail);
+		virtual RTLIL::IdString derive(RTLIL::Design *design, dict<RTLIL::IdString, RTLIL::Const> parameters, dict<RTLIL::IdString, RTLIL::Module*> interfaces, bool mayfail);
 		virtual std::string derive_common(RTLIL::Design *design, dict<RTLIL::IdString, RTLIL::Const> parameters, AstNode **new_ast_out, bool mayfail);
 		virtual void reprocess_module(RTLIL::Design *design, dict<RTLIL::IdString, RTLIL::Module *> local_interfaces);
 		virtual RTLIL::Module *clone() const;

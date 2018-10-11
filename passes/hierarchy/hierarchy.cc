@@ -235,7 +235,7 @@ bool expand_module(RTLIL::Design *design, RTLIL::Module *module, bool flag_check
 			array_cells[cell] = std::pair<int, int>(idx, num);
 			cell->type = cell->type.str().substr(pos_type + 1);
 		}
-		dict<RTLIL::IdString, RTLIL::Cell*> interfaces_to_add_to_submodule;
+		dict<RTLIL::IdString, RTLIL::Module*> interfaces_to_add_to_submodule;
 
 		if (design->modules_.count(cell->type) == 0)
 		{
@@ -305,7 +305,7 @@ bool expand_module(RTLIL::Design *design, RTLIL::Module *module, bool flag_check
 							}
 						}
 						connections_to_remove.push_back(conn.first);
-						//interfaces_to_add_to_submodule[conn.first] = interfaces_in_module.at(interface_name);
+						interfaces_to_add_to_submodule[conn.first] = interfaces_in_module.at(interface_name);
                     }
                     else will_do_step = true;
 					}
