@@ -1169,6 +1169,17 @@ RTLIL::IdString AstModule::derive(RTLIL::Design *design, dict<RTLIL::IdString, R
 		RTLIL::Module* mod = design->module(modname);
         mod->set_bool_attribute("\\reprocessed");
 
+		for(auto &intf : interfaces) {
+            if(mod->wires_.count(intf.first)) {
+                mod->wires_.erase(intf.first);
+                mod->fixup_ports();
+                mod->addCell(intf.first, intf.second->name);
+            }
+            else {
+                log_error("No port with matching name found (%s) in %s. Stopping\n", log_id(intf.first), modname);
+            }
+        }
+
         // FIXME Copy all cells (RTLIL::Cell) of interfaces in "interfaces" into "mod".
 
 		//for(auto &intf : interfaces) {
