@@ -52,6 +52,7 @@ module SubModule1(
         u_MyInterface.mysig_out <= ~sig;
     end
 
+  MyInterface #(.WIDTH(22)) MyInterfaceInstanceInSub();
 
 endmodule
     
