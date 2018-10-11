@@ -1080,6 +1080,20 @@ void AstModule::reprocess_module(RTLIL::Design *design, dict<RTLIL::IdString, RT
 {
 	bool is_top = false;
 	AstNode *new_ast = ast->clone();
+    for(size_t i=0;i<new_ast->children.size();i++) {
+        AstNode *ch = new_ast->children[i];
+        if (ch->type == AST_CELL){
+            for (auto &intf : local_interfaces) {
+                std::string intfname = log_id(intf.first);
+                intfname = "\\" + intfname;
+                if (ch->str == intfname) {
+                    new_ast->children.erase(new_ast->children.begin() + i);
+                    i--;
+                    break;
+                }
+            }
+        }
+    }
 	// FIXME: add interface members to the AST tree 'new_ast' here.
 	std::string original_name = log_id(this->name);
 	std::cout << "original name: " << original_name << std::endl;
@@ -1089,8 +1103,9 @@ void AstModule::reprocess_module(RTLIL::Design *design, dict<RTLIL::IdString, RT
 		this->attributes.erase("\\top");
 		is_top = true;
 	}
-	design->add(process_module(new_ast, false));
-	RTLIL::Module* mod = design->module(original_name);
+	AstModule *newmod = process_module(new_ast, false);
+	design->add(newmod);
+	RTLIL::Module* mod = design->module("\\" + original_name);
 	if (is_top)
 		mod->set_bool_attribute("\\top");
 }
