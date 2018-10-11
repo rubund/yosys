@@ -624,8 +624,6 @@ public:
 	SigSpec(bool bit);
 
 	SigSpec(RTLIL::SigSpec &&other) {
-		is_interface = other.is_interface;
-		interface_name = other.interface_name;
 		width_ = other.width_;
 		hash_ = other.hash_;
 		chunks_ = std::move(other.chunks_);
@@ -633,8 +631,6 @@ public:
 	}
 
 	const RTLIL::SigSpec &operator=(RTLIL::SigSpec &&other) {
-		is_interface = other.is_interface;
-		interface_name = other.interface_name;
 		width_ = other.width_;
 		hash_ = other.hash_;
 		chunks_ = std::move(other.chunks_);
@@ -647,8 +643,6 @@ public:
 		return hash_;
 	}
 
-	bool is_interface;
-	RTLIL::IdString interface_name;
 
 	inline const std::vector<RTLIL::SigChunk> &chunks() const { pack(); return chunks_; }
 	inline const std::vector<RTLIL::SigBit> &bits() const { inline_unpack(); return bits_; }
@@ -901,7 +895,6 @@ public:
 
 	int refcount_wires_;
 	int refcount_cells_;
-	bool is_interface;
 
 	dict<RTLIL::IdString, RTLIL::Wire*> wires_;
 	dict<RTLIL::IdString, RTLIL::Cell*> cells_;
@@ -1165,7 +1158,6 @@ public:
 	RTLIL::IdString name;
 	int width, start_offset, port_id;
 	bool port_input, port_output, upto;
-	bool is_interface;
 };
 
 struct RTLIL::Memory : public RTLIL::AttrObject
