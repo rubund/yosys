@@ -1132,7 +1132,7 @@ RTLIL::IdString AstModule::derive(RTLIL::Design *design, dict<RTLIL::IdString, R
 	if (!design->has(modname)) {
 		new_ast->str = modname;
 		for(auto &intf : interfaces) {
-			RTLIL::Module * intfmodule = intf.second; 
+			RTLIL::Module * intfmodule = intf.second;
 			std::string intfname = log_id(intf.first);
 			intfname = "\\" + intfname;
 			for (auto &wire_it : intfmodule->wires_){

@@ -726,14 +726,14 @@ struct HierarchyPass : public Pass {
 					did_something = true;
 			}
 
-            
+
 			RTLIL::Module *tmp_top_mod = check_if_top_has_changed(design, top_mod);
-            if (tmp_top_mod != NULL) {
-                if (tmp_top_mod != top_mod){
-                    top_mod = tmp_top_mod;
-                    did_something = true;
-                }
-            }
+			if (tmp_top_mod != NULL) {
+				if (tmp_top_mod != top_mod){
+					top_mod = tmp_top_mod;
+					did_something = true;
+				}
+			}
 		}
 
 		if (top_mod != NULL) {
