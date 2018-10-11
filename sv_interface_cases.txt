@@ -1,0 +1,10 @@
+- Interface at top module interface only
+  - ports must be exploded  in all modules having interface
+- Interface within a module and propagated down
+  - interface instance exploded in the parent module
+  - all sub-modules must have interface exploded
+
+
+1. Initial process module generates RTLIL instances without parameters and without interface instances
+2. In hierarchy step, every time an interface instance is found, derive interface to get non-parameterized version of interface. Then record this, and explode the interface.
+3. When reaching sub-modules of the module containing the interface, explode the interfaces based on the recorded interface in 2.
