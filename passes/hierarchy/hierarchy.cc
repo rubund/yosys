@@ -750,7 +750,7 @@ struct HierarchyPass : public Pass {
 				else
 					mod_it.second->attributes.erase("\\top");
                 mod_it.second->attributes.erase("\\initial_top");
-            }
+			}
 		}
 
 		if (!nokeep_asserts) {

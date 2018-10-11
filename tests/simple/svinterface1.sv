@@ -19,6 +19,7 @@ module TopModule(
 
 
   assign MyInterfaceInstance.setting = 1;
+  assign MyInterfaceInstance.other_setting[2:0] = 3'b101;
 
 endmodule
 
