@@ -792,7 +792,11 @@ struct HierarchyPass : public Pass {
 					did_something = true;
 			}
 
-			top_mod = check_if_top_has_changed(design, top_mod);
+            
+			RTLIL::Module *tmp_top_mod = check_if_top_has_changed(design, top_mod);
+            if (tmp_top_mod != NULL) {
+                top_mod = tmp_top_mod;
+            }
 		}
 
 		if (top_mod != NULL) {
