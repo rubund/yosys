@@ -54,5 +54,22 @@ module SubModule1(
 
   MyInterface #(.WIDTH(22)) MyInterfaceInstanceInSub();
 
+  SubModule2 u_SubModule2 (
+    .clk(clk),
+    .rst(rst),
+    .u_MyInterfaceInSub2(u_MyInterface),
+    .sig (sig)
+  );
+
 endmodule
     
+module SubModule2(
+
+    input logic clk,
+    input logic rst,
+    MyInterface u_MyInterfaceInSub2,
+    input logic [1:0] sig
+
+  );
+
+endmodule
