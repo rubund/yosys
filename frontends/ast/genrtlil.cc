@@ -1010,7 +1010,7 @@ RTLIL::SigSpec AstNode::genRTLIL(int width_hint, bool sign_hint)
 			// with the individual signals:
 			if (is_interface) {
 				RTLIL::Wire *dummy_wire;
-				std::string dummy_wire_name = "\\dummywireforinterface" + str;
+				std::string dummy_wire_name = "$dummywireforinterface" + str;
 				if (current_module->wires_.count(dummy_wire_name))
 					dummy_wire = current_module->wires_[dummy_wire_name];
 				else {

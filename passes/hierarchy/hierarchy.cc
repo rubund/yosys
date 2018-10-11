@@ -226,7 +226,7 @@ bool expand_module(RTLIL::Design *design, RTLIL::Module *module, bool flag_check
 			if(mod->wires_.count(conn.first) != 0 && mod->wire(conn.first)->get_bool_attribute("\\is_interface")) { // Check if the connection is present as an interface in the sub-module's port list
 				if(conn.second.bits().size() == 1 && conn.second.bits()[0].wire->get_bool_attribute("\\is_interface")) {
 					std::string interface_name_str = log_id(conn.second.bits()[0].wire->name);
-					interface_name_str.replace(0,22,"");
+					interface_name_str.replace(0,23,"");
 					interface_name_str = "\\" + interface_name_str;
 					RTLIL::IdString interface_name = interface_name_str;
 					bool will_do_step = false;
