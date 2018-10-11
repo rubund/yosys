@@ -898,8 +898,6 @@ public:
 	dict<RTLIL::IdString, RTLIL::Wire*> wires_;
 	dict<RTLIL::IdString, RTLIL::Cell*> cells_;
 	std::vector<RTLIL::SigSig> connections_;
-	dict<RTLIL::IdString, RTLIL::Cell*> interfaces_;
-	bool done_interface_cells;
 
 	RTLIL::IdString name;
 	pool<RTLIL::IdString> avail_parameters;
@@ -944,7 +942,6 @@ public:
 
 	RTLIL::Wire* wire(RTLIL::IdString id) { return wires_.count(id) ? wires_.at(id) : nullptr; }
 	RTLIL::Cell* cell(RTLIL::IdString id) { return cells_.count(id) ? cells_.at(id) : nullptr; }
-	RTLIL::Cell* interface(RTLIL::IdString id) { return interfaces_.count(id) ? interfaces_.at(id) : nullptr; }
 
 	RTLIL::ObjRange<RTLIL::Wire*> wires() { return RTLIL::ObjRange<RTLIL::Wire*>(&wires_, &refcount_wires_); }
 	RTLIL::ObjRange<RTLIL::Cell*> cells() { return RTLIL::ObjRange<RTLIL::Cell*>(&cells_, &refcount_cells_); }
@@ -1190,8 +1187,6 @@ public:
 	RTLIL::IdString type;
 	dict<RTLIL::IdString, RTLIL::SigSpec> connections_;
 	dict<RTLIL::IdString, RTLIL::Const> parameters;
-	bool replaced_interface;
-	bool already_derived;
 
 	// access cell ports
 	bool hasPort(RTLIL::IdString portname) const;
