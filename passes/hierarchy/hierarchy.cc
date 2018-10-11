@@ -534,7 +534,7 @@ int find_top_mod_score(Design *design, Module *module, dict<Module*, int> &db)
 
 RTLIL::Module *check_if_top_has_changed(Design *design, Module *top_mod)
 {
-	if(top_mod->get_bool_attribute("\\top"))
+	if(top_mod->get_bool_attribute("\\initial_top"))
 		return top_mod;
 	else {
 		for (auto mod : design->modules()) {
@@ -773,6 +773,14 @@ struct HierarchyPass : public Pass {
 		if (flag_simcheck && top_mod == nullptr)
 			log_error("Design has no top module.\n");
 
+		if (top_mod != NULL) {
+			for (auto &mod_it : design->modules_)
+				if (mod_it.second == top_mod)
+					mod_it.second->attributes["\\initial_top"] = RTLIL::Const(1);
+				else
+					mod_it.second->attributes.erase("\\initial_top");
+		}
+
 		bool did_something = true;
 		while (did_something)
 		{
@@ -795,7 +803,10 @@ struct HierarchyPass : public Pass {
             
 			RTLIL::Module *tmp_top_mod = check_if_top_has_changed(design, top_mod);
             if (tmp_top_mod != NULL) {
-                top_mod = tmp_top_mod;
+                if (tmp_top_mod != top_mod){
+                    top_mod = tmp_top_mod;
+                    did_something = true;
+                }
             }
 		}
 
@@ -805,11 +816,13 @@ struct HierarchyPass : public Pass {
 		}
 
 		if (top_mod != NULL) {
-			for (auto &mod_it : design->modules_)
+			for (auto &mod_it : design->modules_) {
 				if (mod_it.second == top_mod)
 					mod_it.second->attributes["\\top"] = RTLIL::Const(1);
 				else
 					mod_it.second->attributes.erase("\\top");
+                mod_it.second->attributes.erase("\\initial_top");
+            }
 		}
 
 		if (!nokeep_asserts) {

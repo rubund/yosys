@@ -1099,8 +1099,8 @@ void AstModule::reprocess_module(RTLIL::Design *design, dict<RTLIL::IdString, RT
 	std::cout << "original name: " << original_name << std::endl;
 	std::string changed_name = "\\" + original_name + "_before_replacing_local_interfaces";
 	design->rename(this, changed_name);
-	if (this->get_bool_attribute("\\top")) {
-		this->attributes.erase("\\top");
+	if (this->get_bool_attribute("\\initial_top")) {
+		this->attributes.erase("\\initial_top");
 		is_top = true;
 	}
 	AstModule *newmod = process_module(new_ast, false);
