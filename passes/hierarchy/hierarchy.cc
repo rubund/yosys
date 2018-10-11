@@ -225,7 +225,7 @@ bool expand_module(RTLIL::Design *design, RTLIL::Module *module, bool flag_check
 		// some lists, so that they can be replaced further down:
 		for (auto &conn : cell->connections()) {
 			if(mod->wires_.count(conn.first) != 0 && mod->wire(conn.first)->get_bool_attribute("\\is_interface")) { // Check if the connection is present as an interface in the sub-module's port list
-				if(conn.second.is_interface) { // Check if the 'wire' is an interface instance in the parent module
+				if(true) {
 					RTLIL::IdString interface_name = conn.second.interface_name; 
 					bool will_do_step = false;
 					if(module->get_bool_attribute("\\reprocessed")) {
