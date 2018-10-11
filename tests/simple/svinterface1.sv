@@ -62,7 +62,7 @@ module SubModule1(
   );
 
 endmodule
-    
+
 module SubModule2(
 
     input logic clk,

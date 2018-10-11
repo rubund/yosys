@@ -37,7 +37,6 @@ struct generate_port_decl_t {
 	int index;
 };
 
-
 void generate(RTLIL::Design *design, const std::vector<std::string> &celltypes, const std::vector<generate_port_decl_t> &portdecls)
 {
 	std::set<RTLIL::IdString> found_celltypes;
