@@ -1094,7 +1094,6 @@ void AstModule::reprocess_module(RTLIL::Design *design, dict<RTLIL::IdString, RT
 		std::string intfname = log_id(intf.first);
 		intfname = "\\" + intfname;
 		RTLIL::Module *intfmodule = intf.second;
-		printf("Wires in interface:  %s\n", intfname.c_str());
 		for (auto &wire_it : intfmodule->wires_){
 			AstNode *wire = new AstNode(AST_WIRE, new AstNode(AST_RANGE, AstNode::mkconst_int(wire_it.second->width -1, true), AstNode::mkconst_int(0, true)));
 			std::string newname = log_id(wire_it.first);
