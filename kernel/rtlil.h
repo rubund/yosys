@@ -898,6 +898,8 @@ public:
 	dict<RTLIL::IdString, RTLIL::Wire*> wires_;
 	dict<RTLIL::IdString, RTLIL::Cell*> cells_;
 	std::vector<RTLIL::SigSig> connections_;
+	dict<RTLIL::IdString, RTLIL::Cell*> interfaces_;
+	bool done_interface_cells;
 
 	RTLIL::IdString name;
 	pool<RTLIL::IdString> avail_parameters;
@@ -907,7 +909,9 @@ public:
 	Module();
 	virtual ~Module();
 	virtual RTLIL::IdString derive(RTLIL::Design *design, dict<RTLIL::IdString, RTLIL::Const> parameters, bool mayfail = false);
+	virtual RTLIL::IdString derive(RTLIL::Design *design, dict<RTLIL::IdString, RTLIL::Const> parameters, dict<RTLIL::IdString, RTLIL::Module*> interfaces, bool mayfail = false);
 	virtual size_t count_id(RTLIL::IdString id);
+	virtual void reprocess_module(RTLIL::Design *design, dict<RTLIL::IdString, RTLIL::Module *> local_interfaces);
 
 	virtual void sort();
 	virtual void check();
@@ -940,6 +944,7 @@ public:
 
 	RTLIL::Wire* wire(RTLIL::IdString id) { return wires_.count(id) ? wires_.at(id) : nullptr; }
 	RTLIL::Cell* cell(RTLIL::IdString id) { return cells_.count(id) ? cells_.at(id) : nullptr; }
+	RTLIL::Cell* interface(RTLIL::IdString id) { return interfaces_.count(id) ? interfaces_.at(id) : nullptr; }
 
 	RTLIL::ObjRange<RTLIL::Wire*> wires() { return RTLIL::ObjRange<RTLIL::Wire*>(&wires_, &refcount_wires_); }
 	RTLIL::ObjRange<RTLIL::Cell*> cells() { return RTLIL::ObjRange<RTLIL::Cell*>(&cells_, &refcount_cells_); }
@@ -1185,6 +1190,8 @@ public:
 	RTLIL::IdString type;
 	dict<RTLIL::IdString, RTLIL::SigSpec> connections_;
 	dict<RTLIL::IdString, RTLIL::Const> parameters;
+	bool replaced_interface;
+	bool already_derived;
 
 	// access cell ports
 	bool hasPort(RTLIL::IdString portname) const;
