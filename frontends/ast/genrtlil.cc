@@ -1009,9 +1009,15 @@ RTLIL::SigSpec AstNode::genRTLIL(int width_hint, bool sign_hint)
 			// This makes it possible for the hierarchy pass to see what are interface connections and then replace them
 			// with the individual signals:
 			if (is_interface) {
-				RTLIL::SigSpec tmp = RTLIL::SigSpec();
-				tmp.is_interface = true;
-				tmp.interface_name = str;
+				RTLIL::Wire *dummy_wire;
+				std::string dummy_wire_name = "\\dummywireforinterface" + str;
+				if (current_module->wires_.count(dummy_wire_name))
+					dummy_wire = current_module->wires_[dummy_wire_name];
+				else {
+					dummy_wire = current_module->addWire(dummy_wire_name);
+					dummy_wire->set_bool_attribute("\\is_interface");
+				}
+				RTLIL::SigSpec tmp = RTLIL::SigSpec(dummy_wire);
 				return tmp;
 			}
 
