@@ -234,7 +234,7 @@ bool expand_module(RTLIL::Design *design, RTLIL::Module *module, bool flag_check
 					interface_modport = "\\" + d;
 				}
 				if(conn.second.bits().size() == 1 && conn.second.bits()[0].wire->get_bool_attribute("\\is_interface")) {
-					std::string interface_name_str = log_id(conn.second.bits()[0].wire->name);
+					std::string interface_name_str = conn.second.bits()[0].wire->name.str();
 					interface_name_str.replace(0,23,"");
 					interface_name_str = "\\" + interface_name_str;
 					RTLIL::IdString interface_name = interface_name_str;
@@ -243,8 +243,8 @@ bool expand_module(RTLIL::Design *design, RTLIL::Module *module, bool flag_check
 						if (interfaces_in_module.count(interface_name) > 0) { // Check if the interface instance is present in module
 							RTLIL::Module *mod_replace_ports = interfaces_in_module.at(interface_name);
 						for (auto &mod_wire : mod_replace_ports->wires_) {
-							std::string signal_name1 = "\\" + std::string(log_id(conn.first)) + "." + std::string(log_id(mod_wire.first));
-							std::string signal_name2 = "\\" + std::string(log_id(interface_name)) + "." + std::string(log_id(mod_wire.first));
+							std::string signal_name1 = "\\" + conn.first.str() + "." + mod_wire.first.str();
+							std::string signal_name2 = "\\" + interface_name.str() + "." + mod_wire.first.str();
 							connections_to_add_name.push_back(RTLIL::IdString(signal_name1));
 							if(module->wires_.count(signal_name2) == 0) {
 								log_error("Could not find signal '%s' in '%s'\n", signal_name2.c_str(), log_id(module->name));

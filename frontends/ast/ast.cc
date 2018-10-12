@@ -1091,18 +1091,18 @@ void AstModule::reprocess_module(RTLIL::Design *design, dict<RTLIL::IdString, RT
 	bool is_top = false;
 	AstNode *new_ast = ast->clone();
 	for (auto &intf : local_interfaces) {
-		std::string intfname = log_id(intf.first);
+		std::string intfname = intf.first.str();
 		intfname = "\\" + intfname;
 		RTLIL::Module *intfmodule = intf.second;
 		for (auto &wire_it : intfmodule->wires_){
 			AstNode *wire = new AstNode(AST_WIRE, new AstNode(AST_RANGE, AstNode::mkconst_int(wire_it.second->width -1, true), AstNode::mkconst_int(0, true)));
-			std::string newname = log_id(wire_it.first);
+			std::string newname = wire_it.first.str();
 			newname = intfname + "." + newname;
 			wire->str = newname;
 			new_ast->children.push_back(wire);
 		}
 	}
-	std::string original_name = log_id(this->name);
+	std::string original_name = this->name.str();
 	std::string changed_name = "\\" + original_name + "_before_replacing_local_interfaces";
 	design->rename(this, changed_name);
 	this->set_bool_attribute("\\to_delete");
@@ -1131,7 +1131,7 @@ RTLIL::IdString AstModule::derive(RTLIL::Design *design, dict<RTLIL::IdString, R
 
 	bool has_interfaces = false;
 	for(auto &intf : interfaces) {
-		interf_info += log_id(intf.second);
+		interf_info += intf.second->name.str();
 		has_interfaces = true;
 	}
 
@@ -1143,11 +1143,11 @@ RTLIL::IdString AstModule::derive(RTLIL::Design *design, dict<RTLIL::IdString, R
 		new_ast->str = modname;
 		for(auto &intf : interfaces) {
 			RTLIL::Module * intfmodule = intf.second;
-			std::string intfname = log_id(intf.first);
+			std::string intfname = intf.first.str();
 			intfname = "\\" + intfname;
 			AstNode *modport = NULL;
 			if (modports.count(intfname) > 0) {
-				std::string interface_modport = log_id(modports.at(intfname));
+				std::string interface_modport = modports.at(intfname).str();
 				interface_modport = "\\" + interface_modport;
 				AstModule *ast_module_of_interface = (AstModule*)intfmodule;
 				AstNode *ast_node_of_interface = ast_module_of_interface->ast;
@@ -1161,7 +1161,7 @@ RTLIL::IdString AstModule::derive(RTLIL::Design *design, dict<RTLIL::IdString, R
 			}
 			for (auto &wire_it : intfmodule->wires_){
 				AstNode *wire = new AstNode(AST_WIRE, new AstNode(AST_RANGE, AstNode::mkconst_int(wire_it.second->width -1, true), AstNode::mkconst_int(0, true)));
-				std::string origname = log_id(wire_it.first);
+				std::string origname = wire_it.first.str();
 				std::string newname = intfname + "." + origname;
 				wire->str = newname;
 				if (modport != NULL) {
