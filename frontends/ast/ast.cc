@@ -1096,7 +1096,7 @@ void AstModule::reprocess_module(RTLIL::Design *design, dict<RTLIL::IdString, RT
 		RTLIL::Module *intfmodule = intf.second;
 		for (auto &wire_it : intfmodule->wires_){
 			AstNode *wire = new AstNode(AST_WIRE, new AstNode(AST_RANGE, AstNode::mkconst_int(wire_it.second->width -1, true), AstNode::mkconst_int(0, true)));
-			std::string newname = wire_it.first.str();
+			std::string newname = log_id(wire_it.first);
 			newname = intfname + "." + newname;
 			wire->str = newname;
 			new_ast->children.push_back(wire);
@@ -1131,7 +1131,7 @@ RTLIL::IdString AstModule::derive(RTLIL::Design *design, dict<RTLIL::IdString, R
 
 	bool has_interfaces = false;
 	for(auto &intf : interfaces) {
-		interf_info += intf.second->name.str();
+		interf_info += log_id(intf.second->name);
 		has_interfaces = true;
 	}
 
@@ -1160,14 +1160,14 @@ RTLIL::IdString AstModule::derive(RTLIL::Design *design, dict<RTLIL::IdString, R
 			}
 			for (auto &wire_it : intfmodule->wires_){
 				AstNode *wire = new AstNode(AST_WIRE, new AstNode(AST_RANGE, AstNode::mkconst_int(wire_it.second->width -1, true), AstNode::mkconst_int(0, true)));
-				std::string origname = wire_it.first.str();
+				std::string origname = log_id(wire_it.first);
 				std::string newname = intfname + "." + origname;
 				wire->str = newname;
 				if (modport != NULL) {
 					bool found_in_modport = false;
 					for (auto &ch : modport->children) {
 						if (ch->type == AST_MODPORTMEMBER) {
-							std::string compare_name = origname;
+							std::string compare_name = "\\" + origname;
 							if (ch->str == compare_name) {
 								found_in_modport = true;
 								wire->is_input = ch->is_input;
