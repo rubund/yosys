@@ -1146,7 +1146,6 @@ RTLIL::IdString AstModule::derive(RTLIL::Design *design, dict<RTLIL::IdString, R
 			AstNode *modport = NULL;
 			if (modports.count(intfname) > 0) {
 				std::string interface_modport = modports.at(intfname).str();
-				interface_modport = interface_modport;
 				AstModule *ast_module_of_interface = (AstModule*)intfmodule;
 				AstNode *ast_node_of_interface = ast_module_of_interface->ast;
 				for (auto &ch : ast_node_of_interface->children) {
