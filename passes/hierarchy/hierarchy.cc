@@ -776,9 +776,9 @@ struct HierarchyPass : public Pass {
 			}
 		}
 
-		for (auto &mod_it : design->modules_) {
-			mod_it.second->attributes.erase("\\reprocessed");
-		}
+		//for (auto &mod_it : design->modules_) {
+		//	mod_it.second->attributes.erase("\\reprocessed");
+		//}
 
 		if (!nokeep_asserts) {
 			std::map<RTLIL::Module*, bool> cache;
