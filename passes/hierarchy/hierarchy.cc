@@ -225,9 +225,9 @@ bool expand_module(RTLIL::Design *design, RTLIL::Module *module, bool flag_check
 		// some lists, so that they can be replaced further down:
 		for (auto &conn : cell->connections()) {
 			if(mod->wires_.count(conn.first) != 0 && mod->wire(conn.first)->get_bool_attribute("\\is_interface")) { // Check if the connection is present as an interface in the sub-module's port list
-				const pool<string> &interface_type_pool = mod->wire(conn.first)->get_strpool_attribute("\\interface_type");
-				for (auto &d : interface_type_pool) {
-				}
+				//const pool<string> &interface_type_pool = mod->wire(conn.first)->get_strpool_attribute("\\interface_type");
+				//for (auto &d : interface_type_pool) { // TODO: Compare interface type to type in parent module
+				//}
 				const pool<string> &interface_modport_pool = mod->wire(conn.first)->get_strpool_attribute("\\interface_modport");
 				std::string interface_modport = "";
 				for (auto &d : interface_modport_pool) {
