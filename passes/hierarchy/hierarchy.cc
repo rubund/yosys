@@ -174,6 +174,7 @@ bool expand_module(RTLIL::Design *design, RTLIL::Module *module, bool flag_check
 			cell->type = cell->type.str().substr(pos_type + 1);
 		}
 		dict<RTLIL::IdString, RTLIL::Module*> interfaces_to_add_to_submodule;
+		dict<RTLIL::IdString, RTLIL::IdString> modports_used_in_submodule;
 
 		if (design->modules_.count(cell->type) == 0)
 		{
@@ -228,7 +229,9 @@ bool expand_module(RTLIL::Design *design, RTLIL::Module *module, bool flag_check
 				for (auto &d : interface_type_pool) {
 				}
 				const pool<string> &interface_modport_pool = mod->wire(conn.first)->get_strpool_attribute("\\interface_modport");
+				std::string interface_modport = "";
 				for (auto &d : interface_modport_pool) {
+					interface_modport = d;
 				}
 				if(conn.second.bits().size() == 1 && conn.second.bits()[0].wire->get_bool_attribute("\\is_interface")) {
 					std::string interface_name_str = log_id(conn.second.bits()[0].wire->name);
@@ -253,6 +256,9 @@ bool expand_module(RTLIL::Design *design, RTLIL::Module *module, bool flag_check
 						}
 						connections_to_remove.push_back(conn.first);
 						interfaces_to_add_to_submodule[conn.first] = interfaces_in_module.at(interface_name);
+						if (interface_modport != "") {
+							modports_used_in_submodule[conn.first] = interface_modport;
+						}
 					  }
 					  else will_do_step = true;
 					}
