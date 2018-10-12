@@ -1193,7 +1193,6 @@ RTLIL::IdString AstModule::derive(RTLIL::Design *design, dict<RTLIL::IdString, R
 		design->module(modname)->check();
 
 		RTLIL::Module* mod = design->module(modname);
-		mod->set_bool_attribute("\\reprocessed");
 
 		for(auto &intf : interfaces) {
 			if(mod->wires_.count(intf.first)) {
@@ -1205,6 +1204,10 @@ RTLIL::IdString AstModule::derive(RTLIL::Design *design, dict<RTLIL::IdString, R
 			else {
 				log_error("No port with matching name found (%s) in %s. Stopping\n", log_id(intf.first), modname);
 			}
+		}
+
+		if (interfaces.size() > 0) {
+			mod->set_bool_attribute("\\reprocessed");
 		}
 
 	} else {
