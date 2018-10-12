@@ -1145,9 +1145,19 @@ RTLIL::IdString AstModule::derive(RTLIL::Design *design, dict<RTLIL::IdString, R
 			RTLIL::Module * intfmodule = intf.second;
 			std::string intfname = log_id(intf.first);
 			intfname = "\\" + intfname;
+			AstNode *modport = NULL;
 			if (modports.count(intfname) > 0) {
 				std::string interface_modport = log_id(modports.at(intfname));
-				printf("Found modport also here\n");
+				interface_modport = "\\" + interface_modport;
+				AstModule *ast_module_of_interface = (AstModule*)intfmodule;
+				AstNode *ast_node_of_interface = ast_module_of_interface->ast;
+				for (auto &ch : ast_node_of_interface->children) {
+					if (ch->type == AST_MODPORT) {
+						if (ch->str == interface_modport) {
+							modport = ch;
+						}
+					}
+				}
 			}
 			for (auto &wire_it : intfmodule->wires_){
 				AstNode *wire = new AstNode(AST_WIRE, new AstNode(AST_RANGE, AstNode::mkconst_int(wire_it.second->width -1, true), AstNode::mkconst_int(0, true)));

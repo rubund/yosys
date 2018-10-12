@@ -231,7 +231,7 @@ bool expand_module(RTLIL::Design *design, RTLIL::Module *module, bool flag_check
 				const pool<string> &interface_modport_pool = mod->wire(conn.first)->get_strpool_attribute("\\interface_modport");
 				std::string interface_modport = "";
 				for (auto &d : interface_modport_pool) {
-					interface_modport = d;
+					interface_modport = "\\" + d;
 				}
 				if(conn.second.bits().size() == 1 && conn.second.bits()[0].wire->get_bool_attribute("\\is_interface")) {
 					std::string interface_name_str = log_id(conn.second.bits()[0].wire->name);

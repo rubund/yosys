@@ -43,7 +43,7 @@ endinterface
 module SubModule1(
     input logic clk,
     input logic rst,
-    MyInterface.dsf u_MyInterface,
+    MyInterface.my_modport u_MyInterface,
     input logic [1:0] sig
 
   );
