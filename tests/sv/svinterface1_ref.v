@@ -3,6 +3,7 @@ module TopModule(
     input logic clk,
     input logic rst,
     input logic [1:0] sig,
+    output logic [21:0] outOther,
     output logic [1:0] sig_out);
 
 
@@ -16,6 +17,7 @@ module TopModule(
     .u_MyInterface_setting(MyInterfaceInstance_setting),
     .u_MyInterface_mysig_out(MyInterfaceInstance_mysig_out),
     .u_MyInterface_other_setting(MyInterfaceInstance_other_setting),
+    .outOther(outOther),
     .sig (sig)
   );
 
@@ -33,6 +35,7 @@ module SubModule1(
     input logic u_MyInterface_setting,
     output logic [3:0] u_MyInterface_other_setting,
     output logic [1:0] u_MyInterface_mysig_out,
+    output logic [21:0] outOther,
     input logic [1:0] sig
 
   );
@@ -58,8 +61,15 @@ module SubModule1(
     .u_MyInterfaceInSub2_setting(u_MyInterface_setting),
     .u_MyInterfaceInSub2_mysig_out(u_MyInterface_mysig_out),
     .u_MyInterfaceInSub2_other_setting(u_MyInterface_other_setting),
+    .u_MyInterfaceInSub3_setting(MyInterfaceInstanceInSub_setting),
+    .u_MyInterfaceInSub3_mysig_out(MyInterfaceInstanceInSub_mysig_out),
+    .u_MyInterfaceInSub3_other_setting(MyInterfaceInstanceInSub_other_setting),
     .sig (sig)
   );
+    assign outOther = MyInterfaceInstanceInSub_other_setting;
+
+    assign MyInterfaceInstanceInSub_setting = 0;
+    assign MyInterfaceInstanceInSub_mysig_out = 3;
 
 endmodule
 
@@ -70,10 +80,14 @@ module SubModule2(
     input logic u_MyInterfaceInSub2_setting,
     output logic [3:0] u_MyInterfaceInSub2_other_setting,
     input  logic [1:0] u_MyInterfaceInSub2_mysig_out,
+    input logic u_MyInterfaceInSub3_setting,
+    output logic [21:0] u_MyInterfaceInSub3_other_setting,
+    input  logic [1:0] u_MyInterfaceInSub3_mysig_out,
     input logic [1:0] sig
 
   );
 
    assign u_MyInterfaceInSub2_other_setting[3:0] = 9;
+   assign u_MyInterfaceInSub3_other_setting[21:0] = 13;
 
 endmodule

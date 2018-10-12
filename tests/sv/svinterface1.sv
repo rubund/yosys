@@ -3,6 +3,7 @@
 module TopModule(
     input logic clk,
     input logic rst,
+    output logic [21:0] outOther,
     input logic [1:0] sig,
     output logic [1:0] sig_out);
 
@@ -12,6 +13,7 @@ module TopModule(
     .clk(clk),
     .rst(rst),
     .u_MyInterface(MyInterfaceInstance),
+    .outOther(outOther),
     .sig (sig)
   );
 
@@ -50,7 +52,8 @@ module SubModule1(
     input logic clk,
     input logic rst,
     MyInterface.submodule1 u_MyInterface,
-    input logic [1:0] sig
+    input logic [1:0] sig,
+    output logic [21:0] outOther
 
   );
 
@@ -70,8 +73,14 @@ module SubModule1(
     .clk(clk),
     .rst(rst),
     .u_MyInterfaceInSub2(u_MyInterface),
+    .u_MyInterfaceInSub3(MyInterfaceInstanceInSub),
     .sig (sig)
   );
+
+    assign outOther = MyInterfaceInstanceInSub.other_setting;
+
+    assign MyInterfaceInstanceInSub.setting = 0;
+    assign MyInterfaceInstanceInSub.mysig_out = 3;
 
 endmodule
 
@@ -80,10 +89,12 @@ module SubModule2(
     input logic clk,
     input logic rst,
     MyInterface.submodule2 u_MyInterfaceInSub2,
+    MyInterface.submodule2 u_MyInterfaceInSub3,
     input logic [1:0] sig
 
   );
 
    assign u_MyInterfaceInSub2.other_setting[3:0] = 9;
+   assign u_MyInterfaceInSub3.other_setting[21:0] = 13;
 
 endmodule
