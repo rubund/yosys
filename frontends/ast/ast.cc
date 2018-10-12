@@ -1092,7 +1092,6 @@ void AstModule::reprocess_module(RTLIL::Design *design, dict<RTLIL::IdString, RT
 	AstNode *new_ast = ast->clone();
 	for (auto &intf : local_interfaces) {
 		std::string intfname = intf.first.str();
-		std::cout << "intfname: " << intfname << std::endl;
 		RTLIL::Module *intfmodule = intf.second;
 		for (auto &wire_it : intfmodule->wires_){
 			AstNode *wire = new AstNode(AST_WIRE, new AstNode(AST_RANGE, AstNode::mkconst_int(wire_it.second->width -1, true), AstNode::mkconst_int(0, true)));
