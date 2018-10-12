@@ -326,35 +326,30 @@ bool expand_module(RTLIL::Design *design, RTLIL::Module *module, bool flag_check
 		// If there are no overridden parameters AND not interfaces, then we can use the existing module instance as the type
 		// for the cell:
 		if (cell->parameters.size() == 0 && (interfaces_to_add_to_submodule.size() == 0 || !(cell->get_bool_attribute("\\module_not_derived")))) {
-			cell->attributes.erase("\\module_not_derived");
 			// If the cell being processed is an the interface instance itself, go down to "handle_interface_instance:",
 			// so that the signals of the interface are added to the parent module.
 			if (mod->get_bool_attribute("\\is_interface")) {
 				goto handle_interface_instance;
-			}
-			else {
-				cell->attributes.erase("\\interfaces_not_handled");
 			}
 			continue;
 		}
 
 		cell->type = mod->derive(design, cell->parameters, interfaces_to_add_to_submodule, modports_used_in_submodule);
 		cell->parameters.clear();
-		// We set 'already-derived' such that we will not rederive the cell again (needed when there are interfaces connected to the cell)
-		cell->attributes.erase("\\module_not_derived");
 		did_something = true;
 
 		handle_interface_instance:
 
 			// We add all the signals of the interface explicitly to the parent module. This is always needed when we encounter
 			// an interface instance:
-			if (mod->get_bool_attribute("\\is_interface") && cell->get_bool_attribute("\\interfaces_not_handled")) {
+			if (mod->get_bool_attribute("\\is_interface") && cell->get_bool_attribute("\\module_not_derived")) {
 				cell->set_bool_attribute("\\is_interface");
 				RTLIL::Module *derived_module = design->modules_[cell->type];
 				interfaces_in_module[cell->name] = derived_module;
 				did_something = true;
 			}
-			cell->attributes.erase("\\interfaces_not_handled");
+		// We unset 'module_not_derived' such that we will not rederive the cell again (needed when there are interfaces connected to the cell)
+		cell->attributes.erase("\\module_not_derived");
 	}
 	// Setting a flag such that it can be known that we have been through all cells at least once, such that we can know whether to flag
 	// an error because of interface instances not found:
