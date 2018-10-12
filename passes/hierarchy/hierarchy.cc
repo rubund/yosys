@@ -350,6 +350,7 @@ bool expand_module(RTLIL::Design *design, RTLIL::Module *module, bool flag_check
 
 	if (interfaces_in_module.size() > 0 && !module->get_bool_attribute("\\reprocessed")) {
 		module->reprocess_module(design, interfaces_in_module);
+		return did_something;
 	}
 
 
@@ -735,7 +736,18 @@ struct HierarchyPass : public Pass {
 					did_something = true;
 				}
 			}
+
+			std::vector<RTLIL::Module *> modules_to_delete;
+			for(auto &mod_it : design->modules_) {
+				if (mod_it.second->get_bool_attribute("\\to_delete")) {
+					modules_to_delete.push_back(mod_it.second);
+				}
+			}
+			for(size_t i=0; i<modules_to_delete.size(); i++) {
+				design->remove(modules_to_delete[i]);
+			}
 		}
+
 
 		if (top_mod != NULL) {
 			log_header(design, "Analyzing design hierarchy..\n");
@@ -749,8 +761,11 @@ struct HierarchyPass : public Pass {
 				else
 					mod_it.second->attributes.erase("\\top");
 				mod_it.second->attributes.erase("\\initial_top");
-				mod_it.second->attributes.erase("\\reprocessed");
 			}
+		}
+
+		for (auto &mod_it : design->modules_) {
+			mod_it.second->attributes.erase("\\reprocessed");
 		}
 
 		if (!nokeep_asserts) {

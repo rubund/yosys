@@ -1105,6 +1105,7 @@ void AstModule::reprocess_module(RTLIL::Design *design, dict<RTLIL::IdString, RT
 	std::string original_name = log_id(this->name);
 	std::string changed_name = "\\" + original_name + "_before_replacing_local_interfaces";
 	design->rename(this, changed_name);
+	this->set_bool_attribute("\\to_delete");
 	if (this->get_bool_attribute("\\initial_top")) {
 		this->attributes.erase("\\initial_top");
 		is_top = true;
