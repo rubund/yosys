@@ -871,7 +871,7 @@ RTLIL::SigSpec AstNode::genRTLIL(int width_hint, bool sign_hint)
 					std::string name_type = children[i]->str;
 					size_t ndots = std::count(name_type.begin(), name_type.end(), '.');
 					if (ndots == 0) {
-						wire->attributes["\\interface_name"] = name_type;
+						wire->attributes["\\interface_type"] = name_type;
 					}
 					else {
 						std::stringstream name_type_stream(name_type);
@@ -881,7 +881,7 @@ RTLIL::SigSpec AstNode::genRTLIL(int width_hint, bool sign_hint)
 							seglist.push_back(segment);
 						}
 						if (ndots == 1) {
-							wire->attributes["\\interface_name"] = seglist[0];
+							wire->attributes["\\interface_type"] = seglist[0];
 							wire->attributes["\\interface_modport"] = seglist[1];
 						}
 						else {

@@ -38,7 +38,7 @@ endinterface
 module SubModule1(
     input logic clk,
     input logic rst,
-    MyInterface u_MyInterface,
+    MyInterface.blabla u_MyInterface,
     input logic [1:0] sig
 
   );
