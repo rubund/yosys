@@ -1168,7 +1168,8 @@ RTLIL::IdString AstModule::derive(RTLIL::Design *design, dict<RTLIL::IdString, R
 					bool found_in_modport = false;
 					for (auto &ch : modport->children) {
 						if (ch->type == AST_MODPORTMEMBER) {
-							if (ch->str == origname) {
+							std::string compare_name = "\\" + origname;
+							if (ch->str == compare_name) {
 								found_in_modport = true;
 								wire->is_input = ch->is_input;
 								wire->is_output = ch->is_output;
