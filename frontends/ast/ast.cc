@@ -1119,7 +1119,7 @@ void AstModule::reprocess_module(RTLIL::Design *design, dict<RTLIL::IdString, RT
 }
 
 // create a new parametric module (when needed) and return the name of the generated module - WITH support for interfaces
-RTLIL::IdString AstModule::derive(RTLIL::Design *design, dict<RTLIL::IdString, RTLIL::Const> parameters, dict<RTLIL::IdString, RTLIL::Module*> interfaces, bool mayfail)
+RTLIL::IdString AstModule::derive(RTLIL::Design *design, dict<RTLIL::IdString, RTLIL::Const> parameters, dict<RTLIL::IdString, RTLIL::Module*> interfaces, dict<RTLIL::IdString, RTLIL::IdString> modports, bool mayfail)
 {
 	AstNode *new_ast = NULL;
 	std::string modname = derive_common(design, parameters, &new_ast, mayfail);

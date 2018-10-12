@@ -338,7 +338,7 @@ bool expand_module(RTLIL::Design *design, RTLIL::Module *module, bool flag_check
 			continue;
 		}
 
-		cell->type = mod->derive(design, cell->parameters, interfaces_to_add_to_submodule);
+		cell->type = mod->derive(design, cell->parameters, interfaces_to_add_to_submodule, modports_used_in_submodule);
 		cell->parameters.clear();
 		// We set 'already-derived' such that we will not rederive the cell again (needed when there are interfaces connected to the cell)
 		cell->attributes.erase("\\module_not_derived");
