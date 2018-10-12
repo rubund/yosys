@@ -32,8 +32,9 @@ interface MyInterface #(
 
   logic [1:0] mysig_out;
 
-    modport my_modport (
+    modport submodule1 (
         input  setting,
+        input  other_setting,
         output mysig_out
     );
 
@@ -43,7 +44,7 @@ endinterface
 module SubModule1(
     input logic clk,
     input logic rst,
-    MyInterface.my_modport u_MyInterface,
+    MyInterface.submodule1 u_MyInterface,
     input logic [1:0] sig
 
   );

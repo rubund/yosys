@@ -1161,12 +1161,30 @@ RTLIL::IdString AstModule::derive(RTLIL::Design *design, dict<RTLIL::IdString, R
 			}
 			for (auto &wire_it : intfmodule->wires_){
 				AstNode *wire = new AstNode(AST_WIRE, new AstNode(AST_RANGE, AstNode::mkconst_int(wire_it.second->width -1, true), AstNode::mkconst_int(0, true)));
-				std::string newname = log_id(wire_it.first);
-				newname = intfname + "." + newname;
+				std::string origname = log_id(wire_it.first);
+				std::string newname = intfname + "." + origname;
 				wire->str = newname;
-				wire->is_input = true;
-				wire->is_output = true;
-				new_ast->children.push_back(wire);
+				if (modport != NULL) {
+					bool found_in_modport = false;
+					for (auto &ch : modport->children) {
+						if (ch->type == AST_MODPORTMEMBER) {
+							if (ch->str == origname) {
+								found_in_modport = true;
+								wire->is_input = ch->is_input;
+								wire->is_output = ch->is_output;
+								break;
+							}
+						}
+					}
+					if (found_in_modport) { // If not found in modport, do not create port
+						new_ast->children.push_back(wire);
+					}
+				}
+				else { // If no modport, set inout
+					wire->is_input = true;
+					wire->is_output = true;
+					new_ast->children.push_back(wire);
+				}
 			}
 		}
 
