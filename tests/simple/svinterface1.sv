@@ -32,13 +32,18 @@ interface MyInterface #(
 
   logic [1:0] mysig_out;
 
+    modport my_modport (
+        input  setting,
+        output mysig_out
+    );
+
 endinterface
 
 
 module SubModule1(
     input logic clk,
     input logic rst,
-    MyInterface.blabla u_MyInterface,
+    MyInterface.dsf u_MyInterface,
     input logic [1:0] sig
 
   );
