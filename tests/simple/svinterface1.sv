@@ -19,7 +19,7 @@ module TopModule(
 
 
   assign MyInterfaceInstance.setting = 1;
-  assign MyInterfaceInstance.other_setting[2:0] = 3'b101;
+//  assign MyInterfaceInstance.other_setting[2:0] = 3'b101;
 
 endmodule
 
@@ -34,8 +34,14 @@ interface MyInterface #(
 
     modport submodule1 (
         input  setting,
-        input  other_setting,
+        output other_setting,
         output mysig_out
+    );
+
+    modport submodule2 (
+        input  setting,
+        output other_setting,
+        input  mysig_out
     );
 
 endinterface
@@ -74,9 +80,11 @@ module SubModule2(
 
     input logic clk,
     input logic rst,
-    MyInterface u_MyInterfaceInSub2,
+    MyInterface.submodule2 u_MyInterfaceInSub2,
     input logic [1:0] sig
 
   );
+
+   assign u_MyInterfaceInSub2.other_setting[2:0] = 9;
 
 endmodule
