@@ -243,8 +243,8 @@ bool expand_module(RTLIL::Design *design, RTLIL::Module *module, bool flag_check
 						if (interfaces_in_module.count(interface_name) > 0) { // Check if the interface instance is present in module
 							RTLIL::Module *mod_replace_ports = interfaces_in_module.at(interface_name);
 						for (auto &mod_wire : mod_replace_ports->wires_) {
-							std::string signal_name1 = "\\" + conn.first.str() + "." + mod_wire.first.str();
-							std::string signal_name2 = "\\" + interface_name.str() + "." + mod_wire.first.str();
+							std::string signal_name1 = conn.first.str() + "." + mod_wire.first.str();
+							std::string signal_name2 = interface_name.str() + "." + mod_wire.first.str();
 							connections_to_add_name.push_back(RTLIL::IdString(signal_name1));
 							if(module->wires_.count(signal_name2) == 0) {
 								log_error("Could not find signal '%s' in '%s'\n", signal_name2.c_str(), log_id(module->name));
