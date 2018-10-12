@@ -239,7 +239,7 @@ bool expand_module(RTLIL::Design *design, RTLIL::Module *module, bool flag_check
 					interface_name_str = "\\" + interface_name_str;
 					RTLIL::IdString interface_name = interface_name_str;
 					bool will_do_step = false;
-					if(module->get_bool_attribute("\\reprocessed")) {
+					if(module->get_bool_attribute("\\interfaces_replaced_in_module")) {
 						if (interfaces_in_module.count(interface_name) > 0) { // Check if the interface instance is present in module
 							RTLIL::Module *mod_replace_ports = interfaces_in_module.at(interface_name);
 						for (auto &mod_wire : mod_replace_ports->wires_) {
@@ -355,7 +355,7 @@ bool expand_module(RTLIL::Design *design, RTLIL::Module *module, bool flag_check
 	// an error because of interface instances not found:
 	module->attributes.erase("\\cells_not_processed");
 
-	if (interfaces_in_module.size() > 0 && !module->get_bool_attribute("\\reprocessed")) {
+	if (interfaces_in_module.size() > 0 && !module->get_bool_attribute("\\interfaces_replaced_in_module")) {
 		module->reprocess_module(design, interfaces_in_module);
 		return did_something;
 	}
@@ -770,10 +770,6 @@ struct HierarchyPass : public Pass {
 				mod_it.second->attributes.erase("\\initial_top");
 			}
 		}
-
-		//for (auto &mod_it : design->modules_) {
-		//	mod_it.second->attributes.erase("\\reprocessed");
-		//}
 
 		if (!nokeep_asserts) {
 			std::map<RTLIL::Module*, bool> cache;

@@ -1115,7 +1115,7 @@ void AstModule::reprocess_module(RTLIL::Design *design, dict<RTLIL::IdString, RT
 	RTLIL::Module* mod = design->module("\\" + original_name);
 	if (is_top)
 		mod->set_bool_attribute("\\top");
-	mod->set_bool_attribute("\\reprocessed");
+	mod->set_bool_attribute("\\interfaces_replaced_in_module");
 }
 
 // create a new parametric module (when needed) and return the name of the generated module - WITH support for interfaces
@@ -1207,7 +1207,7 @@ RTLIL::IdString AstModule::derive(RTLIL::Design *design, dict<RTLIL::IdString, R
 		}
 
 		if (interfaces.size() > 0) {
-			mod->set_bool_attribute("\\reprocessed");
+			mod->set_bool_attribute("\\interfaces_replaced_in_module");
 		}
 
 	} else {
