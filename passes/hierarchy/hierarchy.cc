@@ -744,6 +744,7 @@ struct HierarchyPass : public Pass {
 			}
 
 
+			// The top module might have changed if interface instances has been detected in it:
 			RTLIL::Module *tmp_top_mod = check_if_top_has_changed(design, top_mod);
 			if (tmp_top_mod != NULL) {
 				if (tmp_top_mod != top_mod){
@@ -752,6 +753,7 @@ struct HierarchyPass : public Pass {
 				}
 			}
 
+			// Delete modules marked as 'to_delete':
 			std::vector<RTLIL::Module *> modules_to_delete;
 			for(auto &mod_it : design->modules_) {
 				if (mod_it.second->get_bool_attribute("\\to_delete")) {
