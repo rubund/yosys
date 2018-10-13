@@ -1194,6 +1194,9 @@ RTLIL::IdString AstModule::derive(RTLIL::Design *design, dict<RTLIL::IdString, R
 					if (found_in_modport) {
 						new_ast->children.push_back(wire);
 					}
+					else { // If not found in modport, do not create port
+						delete wire;
+					}
 				}
 				else { // If no modport, set inout
 					wire->is_input = true;
