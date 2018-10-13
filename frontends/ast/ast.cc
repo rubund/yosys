@@ -1087,7 +1087,7 @@ AstModule::~AstModule()
 }
 
 // When an interface instance is found in a module, the whole RTLIL for the module will be rederived again
-// from AST. The interface members are copied into the module with the prefix of the interface.
+// from AST. The interface members are copied into the AST module with the prefix of the interface.
 void AstModule::reprocess_module(RTLIL::Design *design, dict<RTLIL::IdString, RTLIL::Module*> local_interfaces)
 {
 	bool is_top = false;
