@@ -1496,6 +1496,7 @@ RTLIL::SigSpec AstNode::genRTLIL(int width_hint, bool sign_hint)
 
 			RTLIL::Cell *cell = current_module->addCell(str, "");
 			cell->attributes["\\src"] = stringf("%s:%d", filename.c_str(), linenum);
+			// Set attribute 'module_not_derived' which will be cleared again after the hierarchy pass
 			cell->set_bool_attribute("\\module_not_derived");
 
 			for (auto it = children.begin(); it != children.end(); it++) {
