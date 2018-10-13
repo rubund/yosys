@@ -1104,27 +1104,27 @@ void AstModule::reprocess_module(RTLIL::Design *design, dict<RTLIL::IdString, RT
 		}
 	}
 
-  // The old module will be deleted. Rename and mark for deletion:
+	// The old module will be deleted. Rename and mark for deletion:
 	std::string original_name = this->name.str();
 	std::string changed_name = original_name + "_before_replacing_local_interfaces";
 	design->rename(this, changed_name);
 	this->set_bool_attribute("\\to_delete");
 
-  // Check if the module was the top module. If it was, we need to remove the top attribute and put it on th
-  // new module.
+	// Check if the module was the top module. If it was, we need to remove the top attribute and put it on th
+	// new module.
 	if (this->get_bool_attribute("\\initial_top")) {
 		this->attributes.erase("\\initial_top");
 		is_top = true;
 	}
 
-  // Generate RTLIL from AST for the new module and add to the design:
+	// Generate RTLIL from AST for the new module and add to the design:
 	AstModule *newmod = process_module(new_ast, false);
 	design->add(newmod);
 	RTLIL::Module* mod = design->module(original_name);
 	if (is_top)
 		mod->set_bool_attribute("\\top");
 
-  // Set the attribute "interfaces_replaced_in_module" so that it does not happen again.
+	// Set the attribute "interfaces_replaced_in_module" so that it does not happen again.
 	mod->set_bool_attribute("\\interfaces_replaced_in_module");
 }
 
@@ -1153,11 +1153,11 @@ RTLIL::IdString AstModule::derive(RTLIL::Design *design, dict<RTLIL::IdString, R
 	if (!design->has(modname)) {
 		new_ast->str = modname;
 
-    // Iterate over all interfaces which are ports in this module:
+		// Iterate over all interfaces which are ports in this module:
 		for(auto &intf : interfaces) {
 			RTLIL::Module * intfmodule = intf.second;
 			std::string intfname = intf.first.str();
-      // Check if a modport applies for the interface port:
+			// Check if a modport applies for the interface port:
 			AstNode *modport = NULL;
 			if (modports.count(intfname) > 0) {
 				std::string interface_modport = modports.at(intfname).str();
@@ -1171,7 +1171,7 @@ RTLIL::IdString AstModule::derive(RTLIL::Design *design, dict<RTLIL::IdString, R
 					}
 				}
 			}
-      // Iterate over all wires in the interface and add them to the module:
+			// Iterate over all wires in the interface and add them to the module:
 			for (auto &wire_it : intfmodule->wires_){
 				AstNode *wire = new AstNode(AST_WIRE, new AstNode(AST_RANGE, AstNode::mkconst_int(wire_it.second->width -1, true), AstNode::mkconst_int(0, true)));
 				std::string origname = log_id(wire_it.first);
@@ -1179,7 +1179,7 @@ RTLIL::IdString AstModule::derive(RTLIL::Design *design, dict<RTLIL::IdString, R
 				wire->str = newname;
 				if (modport != NULL) {
 					bool found_in_modport = false;
-          // Search for the current wire in the curren modport
+					// Search for the current wire in the curren modport
 					for (auto &ch : modport->children) {
 						if (ch->type == AST_MODPORTMEMBER) {
 							std::string compare_name = "\\" + origname;
@@ -1208,13 +1208,13 @@ RTLIL::IdString AstModule::derive(RTLIL::Design *design, dict<RTLIL::IdString, R
 
 		RTLIL::Module* mod = design->module(modname);
 
-    // Now that the interfaces have been exploded, we can delete the dummy port related to the interface.
+		// Now that the interfaces have been exploded, we can delete the dummy port related to the interface.
 		for(auto &intf : interfaces) {
 			if(mod->wires_.count(intf.first)) {
 				mod->wires_.erase(intf.first);
 				mod->fixup_ports();
-        // We copy the cell of the interface to the sub-module such that it can further be found if it is propagated
-        // down to sub-sub-modules etc.
+				// We copy the cell of the interface to the sub-module such that it can further be found if it is propagated
+				// down to sub-sub-modules etc.
 				RTLIL::Cell * new_subcell = mod->addCell(intf.first, intf.second->name);
 				new_subcell->set_bool_attribute("\\is_interface");
 			}
@@ -1223,7 +1223,7 @@ RTLIL::IdString AstModule::derive(RTLIL::Design *design, dict<RTLIL::IdString, R
 			}
 		}
 
-    // If any interfaces where replaced, set the attribute 'interfaces_replaced_in_module':
+		// If any interfaces where replaced, set the attribute 'interfaces_replaced_in_module':
 		if (interfaces.size() > 0) {
 			mod->set_bool_attribute("\\interfaces_replaced_in_module");
 		}
