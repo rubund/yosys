@@ -146,7 +146,7 @@ bool expand_module(RTLIL::Design *design, RTLIL::Module *module, bool flag_check
 	std::map<RTLIL::Cell*, std::pair<int, int>> array_cells;
 	std::string filename;
 
-	// Always keep track of all derived interfaces available in the current module in 'interaces_in_module':
+	// Always keep track of all derived interfaces available in the current module in 'interfaces_in_module':
 	dict<RTLIL::IdString, RTLIL::Module*> interfaces_in_module;
 	for (auto &cell_it : module->cells_)
 	{
@@ -231,7 +231,7 @@ bool expand_module(RTLIL::Design *design, RTLIL::Module *module, bool flag_check
 				//for (auto &d : interface_type_pool) { // TODO: Compare interface type to type in parent module (not crucially important, but good for robustness)
 				//}
 
-				// Find if the sub-module has set a modport for the current interface conntection:
+				// Find if the sub-module has set a modport for the current interface connection:
 				const pool<string> &interface_modport_pool = mod->wire(conn.first)->get_strpool_attribute("\\interface_modport");
 				std::string interface_modport = "";
 				for (auto &d : interface_modport_pool) {
@@ -745,7 +745,7 @@ struct HierarchyPass : public Pass {
 			}
 
 
-			// The top module might have changed if interface instances has been detected in it:
+			// The top module might have changed if interface instances have been detected in it:
 			RTLIL::Module *tmp_top_mod = check_if_top_has_changed(design, top_mod);
 			if (tmp_top_mod != NULL) {
 				if (tmp_top_mod != top_mod){

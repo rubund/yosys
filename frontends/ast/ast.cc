@@ -1111,7 +1111,7 @@ void AstModule::reprocess_module(RTLIL::Design *design, dict<RTLIL::IdString, RT
 	design->rename(this, changed_name);
 	this->set_bool_attribute("\\to_delete");
 
-	// Check if the module was the top module. If it was, we need to remove the top attribute and put it on th
+	// Check if the module was the top module. If it was, we need to remove the top attribute and put it on the
 	// new module.
 	if (this->get_bool_attribute("\\initial_top")) {
 		this->attributes.erase("\\initial_top");
@@ -1130,7 +1130,7 @@ void AstModule::reprocess_module(RTLIL::Design *design, dict<RTLIL::IdString, RT
 }
 
 // create a new parametric module (when needed) and return the name of the generated module - WITH support for interfaces
-// This method is used to explode the interface when the interface is a port of the module (not instantiataed inside)
+// This method is used to explode the interface when the interface is a port of the module (not instantiated inside)
 RTLIL::IdString AstModule::derive(RTLIL::Design *design, dict<RTLIL::IdString, RTLIL::Const> parameters, dict<RTLIL::IdString, RTLIL::Module*> interfaces, dict<RTLIL::IdString, RTLIL::IdString> modports, bool mayfail)
 {
 	AstNode *new_ast = NULL;
@@ -1180,7 +1180,7 @@ RTLIL::IdString AstModule::derive(RTLIL::Design *design, dict<RTLIL::IdString, R
 				wire->str = newname;
 				if (modport != NULL) {
 					bool found_in_modport = false;
-					// Search for the current wire in the curren modport
+					// Search for the current wire in the wire list for the current modport
 					for (auto &ch : modport->children) {
 						if (ch->type == AST_MODPORTMEMBER) {
 							std::string compare_name = "\\" + origname;
@@ -1212,7 +1212,7 @@ RTLIL::IdString AstModule::derive(RTLIL::Design *design, dict<RTLIL::IdString, R
 
 		RTLIL::Module* mod = design->module(modname);
 
-		// Now that the interfaces have been exploded, we can delete the dummy port related to the interface.
+		// Now that the interfaces have been exploded, we can delete the dummy port related to every interface.
 		for(auto &intf : interfaces) {
 			if(mod->wires_.count(intf.first)) {
 				mod->wires_.erase(intf.first);
@@ -1227,7 +1227,7 @@ RTLIL::IdString AstModule::derive(RTLIL::Design *design, dict<RTLIL::IdString, R
 			}
 		}
 
-		// If any interfaces where replaced, set the attribute 'interfaces_replaced_in_module':
+		// If any interfaces were replaced, set the attribute 'interfaces_replaced_in_module':
 		if (interfaces.size() > 0) {
 			mod->set_bool_attribute("\\interfaces_replaced_in_module");
 		}
