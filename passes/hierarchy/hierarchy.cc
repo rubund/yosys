@@ -238,7 +238,7 @@ bool expand_module(RTLIL::Design *design, RTLIL::Module *module, bool flag_check
 					interface_name_str.replace(0,23,"");
 					interface_name_str = "\\" + interface_name_str;
 					RTLIL::IdString interface_name = interface_name_str;
-					bool will_do_step = false;
+					bool not_found_interface = false;
 					if(module->get_bool_attribute("\\interfaces_replaced_in_module")) {
 						if (interfaces_in_module.count(interface_name) > 0) { // Check if the interface instance is present in module
 							RTLIL::Module *mod_replace_ports = interfaces_in_module.at(interface_name);
@@ -260,12 +260,12 @@ bool expand_module(RTLIL::Design *design, RTLIL::Module *module, bool flag_check
 							modports_used_in_submodule[conn.first] = interface_modport;
 						}
 					  }
-					  else will_do_step = true;
+					  else not_found_interface = true;
 					}
-					else will_do_step = true;
+					else not_found_interface = true;
 					// If the interface instance has not already been derived in the module, we cannot complete at this stage. Set "has_interfaces_not_found"
 					// which will delay the expansion of this cell:
-					if (will_do_step) {
+					if (not_found_interface) {
 						// If we have already gone over all cells in this module, and the interface has still not been found - flag it as an error:
 						if(!(module->get_bool_attribute("\\cells_not_processed"))) {
 							log_warning("Could not find interface instance for `%s' in `%s'\n", log_id(interface_name), log_id(module));
