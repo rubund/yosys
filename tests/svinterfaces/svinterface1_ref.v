@@ -87,7 +87,15 @@ module SubModule2(
 
   );
 
-   assign u_MyInterfaceInSub2_other_setting[3:0] = 9;
-   assign u_MyInterfaceInSub3_other_setting[21:0] = 13;
+    always @(sig) begin
+      if (sig == 2'b00)
+        u_MyInterfaceInSub3_other_setting[21:0] = 1000;
+      else if (sig == 2'b01)
+        u_MyInterfaceInSub3_other_setting[21:0] = 2000;
+      else if (sig == 2'b10)
+        u_MyInterfaceInSub3_other_setting[21:0] = 3000;
+      else
+        u_MyInterfaceInSub3_other_setting[21:0] = 4000;
+    end
 
 endmodule
