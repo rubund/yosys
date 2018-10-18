@@ -27,7 +27,7 @@ mv output.txt dut_result.txt
 diff reference_result.txt dut_result.txt
 RET=$?
 if [ "$RET" != "0" ] ; then
-    print "failed"
+    echo "failed"
     exit -1
 fi
 
