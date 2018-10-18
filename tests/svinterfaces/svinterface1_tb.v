@@ -8,6 +8,7 @@ module svinterface1_tb;
   logic [21:0] outOther;
   logic [1:0] sig;
   logic [1:0] sig_out;
+  integer outfile;
 
   TopModule u_dut (
     .clk(clk),
@@ -26,6 +27,7 @@ module svinterface1_tb;
   end
 
   initial begin
+    outfile = $fopen("output.txt");
     rst = 1;
     sig = 0;
     @(posedge clk);
@@ -35,6 +37,10 @@ module svinterface1_tb;
     @(posedge clk);
     @(posedge clk);
     $finish;
+  end
+
+  always @(negedge clk) begin
+    $fdisplay(outfile, "%d %d\n", outOther, sig_out);
   end
 
 endmodule
