@@ -563,7 +563,6 @@ endif
 
 test: $(TARGETS) $(EXTRA_TARGETS)
 	+cd tests/simple && bash run-test.sh $(SEEDOPT)
-	+cd tests/svinterfaces && bash run-test.sh $(SEEDOPT)
 	+cd tests/hana && bash run-test.sh $(SEEDOPT)
 	+cd tests/asicworld && bash run-test.sh $(SEEDOPT)
 	+cd tests/realmath && bash run-test.sh $(SEEDOPT)
@@ -574,6 +573,7 @@ test: $(TARGETS) $(EXTRA_TARGETS)
 	+cd tests/bram && bash run-test.sh $(SEEDOPT)
 	+cd tests/various && bash run-test.sh
 	+cd tests/sat && bash run-test.sh
+	+cd tests/svinterfaces && bash run-test.sh $(SEEDOPT)
 	@echo ""
 	@echo "  Passed \"make test\"."
 	@echo ""
