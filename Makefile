@@ -563,6 +563,7 @@ endif
 
 test: $(TARGETS) $(EXTRA_TARGETS)
 	+cd tests/simple && bash run-test.sh $(SEEDOPT)
+	+cd tests/svinterfaces && bash run-test.sh $(SEEDOPT)
 	+cd tests/hana && bash run-test.sh $(SEEDOPT)
 	+cd tests/asicworld && bash run-test.sh $(SEEDOPT)
 	+cd tests/realmath && bash run-test.sh $(SEEDOPT)
