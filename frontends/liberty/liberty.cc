@@ -634,9 +634,12 @@ struct LibertyFrontend : public Frontend {
 				}
 			}
 
-			for (auto node : cell->children)
+			if (!flag_lib)
 			{
-				if (!flag_lib) {
+				// some liberty files do not put ff/latch at the beginning of a cell
+				// try to find "ff" or "latch" and create FF/latch _before_ processing all other nodes
+				for (auto node : cell->children)
+				{
 					if (node->id == "ff" && node->args.size() == 2)
 						create_ff(module, node);
 					if (node->id == "latch" && node->args.size() == 2)
@@ -645,7 +648,10 @@ struct LibertyFrontend : public Frontend {
 							goto skip_cell;
 						}
 				}
+			}
 
+			for (auto node : cell->children)
+			{
 				if (node->id == "pin" && node->args.size() == 1)
 				{
 					LibertyAst *dir = node->find("direction");

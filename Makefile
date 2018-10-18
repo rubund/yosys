@@ -99,7 +99,7 @@ LDFLAGS += -rdynamic
 LDLIBS += -lrt
 endif
 
-YOSYS_VER := 0.7+$(shell cd $(YOSYS_SRC) && test -e .git && { git log --author=clifford@clifford.at --oneline 61f6811.. | wc -l; })
+YOSYS_VER := 0.8+$(shell cd $(YOSYS_SRC) && test -e .git && { git log --author=clifford@clifford.at --oneline 4d4665b.. | wc -l; })
 GIT_REV := $(shell cd $(YOSYS_SRC) && git rev-parse --short HEAD 2> /dev/null || echo UNKNOWN)
 OBJS = kernel/version_$(GIT_REV).o
 
@@ -109,7 +109,7 @@ OBJS = kernel/version_$(GIT_REV).o
 # is just a symlink to your actual ABC working directory, as 'make mrproper'
 # will remove the 'abc' directory and you do not want to accidentally
 # delete your work on ABC..
-ABCREV = ae6716b
+ABCREV = 14d985a
 ABCPULL = 1
 ABCURL ?= https://github.com/berkeley-abc/abc
 ABCMKARGS = CC="$(CXX)" CXX="$(CXX)" ABC_USE_LIBSTDCXX=1
