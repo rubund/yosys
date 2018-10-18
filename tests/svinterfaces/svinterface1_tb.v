@@ -34,13 +34,16 @@ module svinterface1_tb;
     #(2);
     rst = 0;
     @(posedge clk);
-    @(posedge clk);
-    @(posedge clk);
+    for(int i=0;i<20;i++) begin
+        #(2);
+        sig = i;
+        @(posedge clk);
+    end
     $finish;
   end
 
   always @(negedge clk) begin
-    $fdisplay(outfile, "%d %d\n", outOther, sig_out);
+    $fdisplay(outfile, "%d %d", outOther, sig_out);
   end
 
 endmodule
