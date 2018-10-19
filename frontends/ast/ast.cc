@@ -1150,8 +1150,16 @@ void AstModule::reprocess_module(RTLIL::Design *design, dict<RTLIL::IdString, RT
 						}
 						std::cout << "to delete: " << name_type << std::endl;
 						if (design->modules_.count(interface_type) > 0) {
+							AstNode *celltype_for_intf = new AstNode(AST_CELLTYPE);
+							celltype_for_intf->str = interface_type;
+							AstNode *cell_for_intf = new AstNode(AST_CELL, celltype_for_intf);
+							cell_for_intf->str = name_port + "_inst_from_top";
+							new_ast->children.push_back(cell_for_intf);
+
 							RTLIL::Module *intfmodule = design->modules_[interface_type];
-							//delete_current = true;
+							delete_current = false;
+							if(delete_current)
+								new_ast->children.erase(new_ast->children.begin()+i);
 							AstModule *ast_module_of_interface = (AstModule*)intfmodule;
 							AstNode *ast_node_of_interface = ast_module_of_interface->ast;
 							AstNode *modport = NULL;
@@ -1203,7 +1211,6 @@ void AstModule::reprocess_module(RTLIL::Design *design, dict<RTLIL::IdString, RT
 			}
 		}
 		if (delete_current) {
-			new_ast->children.erase(new_ast->children.begin()+i);
 			i--;
 		}
 	}

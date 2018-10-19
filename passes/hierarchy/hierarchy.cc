@@ -255,8 +255,14 @@ bool expand_module(RTLIL::Design *design, RTLIL::Module *module, bool flag_check
 					RTLIL::IdString interface_name = interface_name_str;
 					bool not_found_interface = false;
 					if(module->get_bool_attribute("\\interfaces_replaced_in_module")) { // If 'interfaces' in the cell have not be been handled yet, there is no need to derive the sub-module either
-						if (interfaces_in_module.count(interface_name) > 0) { // Check if the interface instance is present in module
-							RTLIL::Module *mod_replace_ports = interfaces_in_module.at(interface_name);
+						int nexactmatch = interfaces_in_module.count(interface_name) > 0;
+						std::string interface_name_str2 =  interface_name_str + "_inst_from_top";
+						RTLIL::IdString interface_name2 = interface_name_str2;
+						int nmatch2 = interfaces_in_module.count(interface_name2) > 0;
+						if (nexactmatch > 0 || nmatch2 > 0) { // Check if the interface instance is present in module
+							if (nexactmatch != 0)
+								interface_name2 = interface_name;
+							RTLIL::Module *mod_replace_ports = interfaces_in_module.at(interface_name2);
 							for (auto &mod_wire : mod_replace_ports->wires_) { // Go over all wires in interface, and add replacements to lists.
 								std::string signal_name1 = conn.first.str() + "." + log_id(mod_wire.first);
 								std::string signal_name2 = interface_name.str() + "." + log_id(mod_wire.first);
@@ -270,7 +276,7 @@ bool expand_module(RTLIL::Design *design, RTLIL::Module *module, bool flag_check
 								}
 							}
 							connections_to_remove.push_back(conn.first);
-							interfaces_to_add_to_submodule[conn.first] = interfaces_in_module.at(interface_name);
+							interfaces_to_add_to_submodule[conn.first] = interfaces_in_module.at(interface_name2);
 
 							// Add modports to a dict which will be passed to AstModule::derive
 							if (interface_modport != "") {
