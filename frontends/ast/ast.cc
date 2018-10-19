@@ -1144,7 +1144,52 @@ void AstModule::reprocess_module(RTLIL::Design *design, dict<RTLIL::IdString, RT
 						}
 						std::cout << "to delete: " << name_type << std::endl;
 						if (design->modules_.count(interface_type) > 0) {
+							RTLIL::Module *intfmodule = design->modules_[interface_type];
 							delete_current = true;
+							AstModule *ast_module_of_interface = (AstModule*)intfmodule;
+							AstNode *ast_node_of_interface = ast_module_of_interface->ast;
+							AstNode *modport = NULL;
+							for (auto &chm : ast_node_of_interface->children) {
+								if (chm->type == AST_MODPORT) {
+									if (chm->str == interface_modport) { // Modport found
+										modport = chm;
+									}
+								}
+							}
+
+							std::string intfname = name_port;
+							for (auto &wire_it : intfmodule->wires_){
+								AstNode *wire = new AstNode(AST_WIRE, new AstNode(AST_RANGE, AstNode::mkconst_int(wire_it.second->width -1, true), AstNode::mkconst_int(0, true)));
+								std::string origname = log_id(wire_it.first);
+								std::string newname = intfname + "." + origname;
+								wire->str = newname;
+								if (modport != NULL) {
+									bool found_in_modport = false;
+									// Search for the current wire in the wire list for the current modport
+									for (auto &ch : modport->children) {
+										if (ch->type == AST_MODPORTMEMBER) {
+											std::string compare_name = "\\" + origname;
+											if (ch->str == compare_name) { // Found signal. The modport decides whether it is input or output
+												found_in_modport = true;
+												wire->is_input = ch->is_input;
+												wire->is_output = ch->is_output;
+												break;
+											}
+										}
+									}
+									if (found_in_modport) {
+										new_ast->children.push_back(wire);
+									}
+									else { // If not found in modport, do not create port
+										delete wire;
+									}
+								}
+								else { // If no modport, set inout
+									wire->is_input = true;
+									wire->is_output = true;
+									new_ast->children.push_back(wire);
+								}
+							}
 						}
 					}
 				}
