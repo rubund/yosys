@@ -904,7 +904,7 @@ RTLIL::Const AstNode::realAsConst(int width)
 }
 
 // create a new AstModule from an AST_MODULE AST node
-static AstModule* process_module(AstNode *ast, bool defer)
+static AstModule* process_module(AstNode *ast, bool defer, AstNode *original_ast = NULL)
 {
 	log_assert(ast->type == AST_MODULE || ast->type == AST_INTERFACE);
 
@@ -920,7 +920,11 @@ static AstModule* process_module(AstNode *ast, bool defer)
 	current_module->set_bool_attribute("\\cells_not_processed");
 
 	current_ast_mod = ast;
-	AstNode *ast_before_simplify = ast->clone();
+	AstNode *ast_before_simplify;
+	if (original_ast != NULL)
+		ast_before_simplify = original_ast;
+	else
+		ast_before_simplify = ast->clone();
 
 	if (flag_dump_ast1) {
 		log("Dumping Verilog AST before simplification:\n");
@@ -1105,6 +1109,8 @@ void AstModule::reprocess_module(RTLIL::Design *design, dict<RTLIL::IdString, RT
 		}
 	}
 
+	AstNode *ast_before_replacing_interface_ports = new_ast->clone();
+
 	for (size_t i =0; i<new_ast->children.size(); i++)
 	{
 		AstNode *ch2 = new_ast->children[i];
@@ -1145,7 +1151,7 @@ void AstModule::reprocess_module(RTLIL::Design *design, dict<RTLIL::IdString, RT
 						std::cout << "to delete: " << name_type << std::endl;
 						if (design->modules_.count(interface_type) > 0) {
 							RTLIL::Module *intfmodule = design->modules_[interface_type];
-							delete_current = true;
+							//delete_current = true;
 							AstModule *ast_module_of_interface = (AstModule*)intfmodule;
 							AstNode *ast_node_of_interface = ast_module_of_interface->ast;
 							AstNode *modport = NULL;
@@ -1216,7 +1222,8 @@ void AstModule::reprocess_module(RTLIL::Design *design, dict<RTLIL::IdString, RT
 	}
 
 	// Generate RTLIL from AST for the new module and add to the design:
-	AstModule *newmod = process_module(new_ast, false);
+	AstModule *newmod = process_module(new_ast, false, ast_before_replacing_interface_ports);
+	delete(new_ast);
 	design->add(newmod);
 	RTLIL::Module* mod = design->module(original_name);
 	if (is_top)
