@@ -25,10 +25,10 @@ module svinterface_at_top_tb_wrapper;
     .sig(sig),
     .flip(flip),
     .passThrough(passThrough),
-    .\interfaceInstanceAtTop.setting(interfaceInstanceAtTop_setting),
-    .\interfaceInstanceAtTop.other_setting(interfaceInstanceAtTop_other_setting),
-    .\interfaceInstanceAtTop.mysig_out(interfaceInstanceAtTop_mysig_out),
-    .\interfaceInstanceAtTop.passThrough(interfaceInstanceAtTop_passThrough),
+    .\interfaceInstanceAtTop.setting (interfaceInstanceAtTop_setting),
+    .\interfaceInstanceAtTop.other_setting (interfaceInstanceAtTop_other_setting),
+    .\interfaceInstanceAtTop.mysig_out (interfaceInstanceAtTop_mysig_out),
+    .\interfaceInstanceAtTop.passThrough (interfaceInstanceAtTop_passThrough),
     .sig_out(sig_out)
   );
 
