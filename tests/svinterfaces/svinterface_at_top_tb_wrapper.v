@@ -44,6 +44,7 @@ module svinterface_at_top_tb_wrapper;
     outfile = $fopen("output.txt");
     rst = 1;
     sig = 0;
+    interfaceInstanceAtTop_setting = 0;
     flip = 0;
     @(posedge clk);
     #(2);
@@ -61,7 +62,7 @@ module svinterface_at_top_tb_wrapper;
   end
 
   always @(negedge clk) begin
-    $fdisplay(outfile, "%d %d %d", outOther, sig_out, passThrough);
+    $fdisplay(outfile, "%d %d %d %d", outOther, sig_out, passThrough, interfaceInstanceAtTop_mysig_out);
   end
 
 endmodule
