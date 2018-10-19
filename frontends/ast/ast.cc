@@ -1155,9 +1155,10 @@ void AstModule::reprocess_module(RTLIL::Design *design, dict<RTLIL::IdString, RT
 							AstModule *ast_module_of_interface = (AstModule*)intfmodule;
 							AstNode *ast_node_of_interface = ast_module_of_interface->ast;
 							AstNode *modport = NULL;
+							std::string interface_modport_compare_str = "\\" + interface_modport;
 							for (auto &chm : ast_node_of_interface->children) {
 								if (chm->type == AST_MODPORT) {
-									if (chm->str == interface_modport) { // Modport found
+									if (chm->str == interface_modport_compare_str) { // Modport found
 										modport = chm;
 									}
 								}
