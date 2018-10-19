@@ -1105,36 +1105,57 @@ void AstModule::reprocess_module(RTLIL::Design *design, dict<RTLIL::IdString, RT
 		}
 	}
 
-	for (auto &ch : new_ast->children)
+	for (size_t i =0; i<new_ast->children.size(); i++)
 	{
+		AstNode *ch2 = new_ast->children[i];
+		bool delete_current = false;
 		std::string interface_type = "";
 		std::string interface_modport = "";
-		if (ch->type == AST_INTERFACEPORT) {
-			std::cout << "Child: " << ch->str << std::endl;
-			std::string name_type = ch->str;
-			size_t ndots = std::count(name_type.begin(), name_type.end(), '.');
-			// Separate the interface instance name from any modports:
-			if (ndots == 0) { // Does not have modport
-				interface_type = name_type;
+		if (ch2->type == AST_INTERFACEPORT) {
+			std::string name_port = ch2->str;
+			if (ch2->children.size() > 0) {
+				for(size_t j=0; j<ch2->children.size();j++) {
+					AstNode *ch = ch2->children[j];
+					if(ch->type == AST_INTERFACEPORTTYPE) {
+						//std::cout << "Child: " << ch->str << std::endl;
+						std::string name_type = ch->str;
+						size_t ndots = std::count(name_type.begin(), name_type.end(), '.');
+						// Separate the interface instance name from any modports:
+						if (ndots == 0) { // Does not have modport
+							interface_type = name_type;
+						}
+						else {
+							std::stringstream name_type_stream(name_type);
+							std::string segment;
+							std::vector<std::string> seglist;
+							while(std::getline(name_type_stream, segment, '.')) {
+								seglist.push_back(segment);
+							}
+							if (ndots == 1) { // Has modport
+								interface_type = seglist[0];
+								interface_modport = seglist[1];
+							}
+							else { // Erroneous port type
+								log_error("More than two '.' in signal port type (%s)\n", name_type.c_str());
+							}
+						}
+						for (auto mod : design->modules()) {
+							std::cout << "module: " << mod->name.str() << std::endl;
+						}
+						std::cout << "to delete: " << name_type << std::endl;
+						if (design->modules_.count(interface_type) > 0) {
+							delete_current = true;
+						}
+					}
+				}
 			}
-			else {
-				std::stringstream name_type_stream(name_type);
-				std::string segment;
-				std::vector<std::string> seglist;
-				while(std::getline(name_type_stream, segment, '.')) {
-					seglist.push_back(segment);
-				}
-				if (ndots == 1) { // Has modport
-					interface_type = seglist[0];
-					interface_modport = seglist[1];
-				}
-				else { // Erroneous port type
-					log_error("More than two '.' in signal port type (%s)\n", name_type.c_str());
-				}
-			}
-
+		}
+		if (delete_current) {
+			new_ast->children.erase(new_ast->children.begin()+i);
+			i--;
 		}
 	}
+
 
 	// The old module will be deleted. Rename and mark for deletion:
 	std::string original_name = this->name.str();
