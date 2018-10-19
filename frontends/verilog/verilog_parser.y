@@ -327,6 +327,7 @@ module_arg:
 		astbuf1 = new AstNode(AST_INTERFACEPORT);
 		astbuf1->children.push_back(new AstNode(AST_INTERFACEPORTTYPE));
 		astbuf1->children[0]->str = *$1;
+        astbuf1->top_interface_replaced_with_signals = false;
 		delete $1;
 	} TOK_ID {  /* SV interfaces */
 		if (!sv_mode)

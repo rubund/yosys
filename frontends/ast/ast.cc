@@ -1117,7 +1117,7 @@ void AstModule::reprocess_module(RTLIL::Design *design, dict<RTLIL::IdString, RT
 		bool delete_current = false;
 		std::string interface_type = "";
 		std::string interface_modport = "";
-		if (ch2->type == AST_INTERFACEPORT) {
+		if (ch2->type == AST_INTERFACEPORT && !ch2->top_interface_replaced_with_signals) {
 			std::string name_port = ch2->str;
 			if (ch2->children.size() > 0) {
 				for(size_t j=0; j<ch2->children.size();j++) {
@@ -1156,6 +1156,7 @@ void AstModule::reprocess_module(RTLIL::Design *design, dict<RTLIL::IdString, RT
 							cell_for_intf->str = name_port + "_inst_from_top";
 							new_ast->children.push_back(cell_for_intf);
 
+							ch2->top_interface_replaced_with_signals = true;
 							RTLIL::Module *intfmodule = design->modules_[interface_type];
 							delete_current = false;
 							if(delete_current)

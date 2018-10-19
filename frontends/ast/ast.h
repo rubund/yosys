@@ -174,6 +174,7 @@ namespace AST
 		std::string str;
 		std::vector<RTLIL::State> bits;
 		bool is_input, is_output, is_reg, is_logic, is_signed, is_string, range_valid, range_swapped, was_checked;
+		bool top_interface_replaced_with_signals;
 		int port_id, range_left, range_right;
 		uint32_t integer;
 		double realvalue;
