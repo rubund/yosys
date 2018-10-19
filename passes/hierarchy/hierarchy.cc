@@ -146,6 +146,17 @@ bool expand_module(RTLIL::Design *design, RTLIL::Module *module, bool flag_check
 	std::map<RTLIL::Cell*, std::pair<int, int>> array_cells;
 	std::string filename;
 
+	bool has_interface_ports = false;
+	//dict<RTLIL::IdString, std::pair<RTLIL::IdString, RTLIL::IdString>> interfaces_in_port_list;
+
+	if(!module->get_bool_attribute("\\interfaces_replaced_in_module")) {
+		for (auto &wire : module->wires_) {
+			bool wire_is_interface = wire.second->get_bool_attribute("\\is_interface");
+			if (wire_is_interface) // If any interface ports, we will always reprocess module
+				has_interface_ports = true;
+		}
+	}
+
 	// Always keep track of all derived interfaces available in the current module in 'interfaces_in_module':
 	dict<RTLIL::IdString, RTLIL::Module*> interfaces_in_module;
 	for (auto &cell_it : module->cells_)
@@ -364,7 +375,7 @@ bool expand_module(RTLIL::Design *design, RTLIL::Module *module, bool flag_check
 
 
 	// If any interface instances were found in the module, we need to rederive it completely:
-	if (interfaces_in_module.size() > 0 && !module->get_bool_attribute("\\interfaces_replaced_in_module")) {
+	if ((interfaces_in_module.size() > 0 || has_interface_ports) && !module->get_bool_attribute("\\interfaces_replaced_in_module")) {
 		module->reprocess_module(design, interfaces_in_module);
 		return did_something;
 	}
