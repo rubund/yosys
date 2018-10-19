@@ -68,7 +68,6 @@ module SubModule1(
 
   );
 
-  assign u_MyInterfaceFromTop.mysig_out = u_MyInterfaceFromTop.setting ? 10 :  20;
 
   always_ff @(posedge clk or posedge rst)
     if(rst)
@@ -85,6 +84,7 @@ module SubModule1(
   SubModule2 u_SubModule2 (
     .clk(clk),
     .rst(rst),
+    .u_MyInterfaceFromTopDown(u_MyInterfaceFromTop),
     .u_MyInterfaceInSub2(u_MyInterface),
     .u_MyInterfaceInSub3(MyInterfaceInstanceInSub)
   );
@@ -101,9 +101,12 @@ module SubModule2(
     input logic clk,
     input logic rst,
     MyInterface.submodule2 u_MyInterfaceInSub2,
+    MyInterface.submodule1 u_MyInterfaceFromTopDown,
     MyInterface.submodule2 u_MyInterfaceInSub3
 
   );
+
+  assign u_MyInterfaceFromTopDown.mysig_out = u_MyInterfaceFromTop.setting ? 10 :  20;
 
    always_comb begin
       if (u_MyInterfaceInSub3.mysig_out == 2'b00)
