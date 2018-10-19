@@ -1,6 +1,6 @@
 `timescale 1ns/10ps
 
-module svinterface_at_top_tb;
+module svinterface_at_top_tb_wrapper;
 
 
   logic clk;
@@ -25,10 +25,10 @@ module svinterface_at_top_tb;
     .sig(sig),
     .flip(flip),
     .passThrough(passThrough),
-    .interfaceInstanceAtTop_setting(interfaceInstanceAtTop_setting),
-    .interfaceInstanceAtTop_other_setting(interfaceInstanceAtTop_other_setting),
-    .interfaceInstanceAtTop_mysig_out(interfaceInstanceAtTop_mysig_out),
-    .interfaceInstanceAtTop_passThrough(interfaceInstanceAtTop_passThrough),
+    .\interfaceInstanceAtTop.setting(interfaceInstanceAtTop_setting),
+    .\interfaceInstanceAtTop.other_setting(interfaceInstanceAtTop_other_setting),
+    .\interfaceInstanceAtTop.mysig_out(interfaceInstanceAtTop_mysig_out),
+    .\interfaceInstanceAtTop.passThrough(interfaceInstanceAtTop_passThrough),
     .sig_out(sig_out)
   );
 

@@ -6,6 +6,10 @@ module TopModule(
     input logic flip,
     output logic [15:0] passThrough,
     output logic [21:0] outOther,
+    input logic interfaceInstanceAtTop_setting,
+    output logic [2:0] interfaceInstanceAtTop_other_setting,
+    output logic [1:0] interfaceInstanceAtTop_mysig_out,
+    output logic [15:0] interfaceInstanceAtTop_passThrough,
     output logic [1:0] sig_out);
 
 
@@ -19,6 +23,10 @@ module TopModule(
     .u_MyInterface_setting(MyInterfaceInstance_setting),
     .u_MyInterface_mysig_out(MyInterfaceInstance_mysig_out),
     .u_MyInterface_other_setting(MyInterfaceInstance_other_setting),
+    .u_MyInterfaceFromTop_setting(interfaceInstanceAtTop_setting),
+    .u_MyInterfaceFromTop_other_setting(interfaceInstanceAtTop_other_setting),
+    .u_MyInterfaceFromTop_mysig_out(interfaceInstanceAtTop_mysig_out),
+    .u_MyInterfaceFromTop_passThrough(interfaceInstanceAtTop_passThrough),
     .outOther(outOther),
     .passThrough (passThrough),
     .sig (sig)
@@ -40,6 +48,10 @@ module SubModule1(
     output logic [1:0] u_MyInterface_mysig_out,
     output logic [21:0] outOther,
     input logic [1:0] sig,
+    input logic u_MyInterfaceFromTop_setting,
+    output logic [2:0]  u_MyInterfaceFromTop_other_setting,
+    output logic [1:0]  u_MyInterfaceFromTop_mysig_out,
+    output logic [14:0] u_MyInterfaceFromTop_passThrough,
     output logic [15:0] passThrough
   );
 
@@ -57,6 +69,7 @@ module SubModule1(
     logic [21:0] MyInterfaceInstanceInSub_other_setting;
     logic [1:0] MyInterfaceInstanceInSub_mysig_out;
 
+  assign u_MyInterfaceFromTop_mysig_out = u_MyInterfaceFromTop_setting ? 10 :  20;
 
   SubModule2 u_SubModule2 (
     .clk(clk),

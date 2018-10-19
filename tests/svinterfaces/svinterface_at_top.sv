@@ -7,6 +7,7 @@ module TopModule(
     input logic [1:0] sig,
     input logic flip,
     output logic [1:0] sig_out,
+    MyInterface.submodule1 interfaceInstanceAtTop,
     output logic [15:0] passThrough);
 
   MyInterface #(.WIDTH(4)) MyInterfaceInstance();
@@ -15,6 +16,7 @@ module TopModule(
     .clk(clk),
     .rst(rst),
     .u_MyInterface(MyInterfaceInstance),
+    .u_MyInterfaceFromTop(interfaceInstanceAtTop),
     .outOther(outOther),
     .sig (sig)
   );
@@ -60,10 +62,13 @@ module SubModule1(
     input logic clk,
     input logic rst,
     MyInterface.submodule1 u_MyInterface,
+    MyInterface.submodule1 u_MyInterfaceFromTop,
     input logic [1:0] sig,
     output logic [21:0] outOther
 
   );
+
+  assign u_MyInterfaceFromTop.mysig_out = u_MyInterfaceFromTop.setting ? 10 :  20;
 
   always_ff @(posedge clk or posedge rst)
     if(rst)
