@@ -462,8 +462,10 @@ void hierarchy_clean(RTLIL::Design *design, RTLIL::Module *top, bool purge_lib)
 					del_wires.insert(wire.second);
 				}
 			}
-			it.second->remove(del_wires);
-			it.second->fixup_ports();
+			if (del_wires.size() > 0) {
+				it.second->remove(del_wires);
+				it.second->fixup_ports();
+			}
 		}
 
 	int del_counter = 0;
