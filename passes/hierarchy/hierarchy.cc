@@ -455,6 +455,16 @@ void hierarchy_clean(RTLIL::Design *design, RTLIL::Module *top, bool purge_lib)
 	for (auto &it : design->modules_)
 		if (used.count(it.second) == 0)
 			del_modules.push_back(it.second);
+		else {
+			pool<RTLIL::Wire*> del_wires;
+			for(auto &wire : it.second->wires_) {
+				if (wire.second->get_bool_attribute("\\is_interface")) {
+					del_wires.insert(wire.second);
+				}
+			}
+			it.second->remove(del_wires);
+			it.second->fixup_ports();
+		}
 
 	int del_counter = 0;
 	for (auto mod : del_modules) {
