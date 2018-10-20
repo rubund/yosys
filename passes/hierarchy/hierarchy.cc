@@ -147,12 +147,12 @@ bool expand_module(RTLIL::Design *design, RTLIL::Module *module, bool flag_check
 	std::string filename;
 
 	bool has_interface_ports = false;
-	//dict<RTLIL::IdString, std::pair<RTLIL::IdString, RTLIL::IdString>> interfaces_in_port_list;
 
+	// If any of the ports are actually interface ports, we will always need to
+	// reprocess the module:
 	if(!module->get_bool_attribute("\\interfaces_replaced_in_module")) {
 		for (auto &wire : module->wires_) {
-			bool wire_is_interface = wire.second->get_bool_attribute("\\is_interface");
-			if (wire_is_interface) // If any interface ports, we will always reprocess module
+			if ((wire.second->port_input || wire.second->port_output) && wire.second->get_bool_attribute("\\is_interface"))
 				has_interface_ports = true;
 		}
 	}
