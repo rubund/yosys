@@ -103,6 +103,7 @@ int main(int argc, char **argv)
 			FS.mount(NODEFS, { root: '/' }, '/hostfs');
 		}
 	);
+	fpd = fopen("/tmp/mydebug","w"); fprintf(fpd, "Started\n"); fclose(fpd);
 
 	mkdir("/work", 0777);
 	chdir("/work");
@@ -192,6 +193,8 @@ int main(int argc, char **argv)
 	bool timing_details = false;
 	bool mode_v = false;
 	bool mode_q = false;
+	FILE *fpd;
+	fpd = fopen("/tmp/mydebug","a"); fprintf(fpd, "Started\n"); fclose(fpd);
 
 #if defined(YOSYS_ENABLE_READLINE) || defined(YOSYS_ENABLE_EDITLINE)
 	if (getenv("HOME") != NULL) {

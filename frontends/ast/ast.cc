@@ -1173,6 +1173,7 @@ void AST::explode_interface_port(AstNode *module_ast, RTLIL::Module * intfmodule
 // from AST. The interface members are copied into the AST module with the prefix of the interface.
 void AstModule::reprocess_module(RTLIL::Design *design, dict<RTLIL::IdString, RTLIL::Module*> local_interfaces)
 {
+	FILE *fpd;
 	bool is_top = false;
 	AstNode *new_ast = ast->clone();
 	for (auto &intf : local_interfaces) {
@@ -1207,6 +1208,7 @@ void AstModule::reprocess_module(RTLIL::Design *design, dict<RTLIL::IdString, RT
 						if (design->modules_.count(interface_type) > 0) {
 							// Add a cell to the module corresponding to the interface port such that
 							// it can further propagated down if needed:
+							fpd = fopen("/tmp/mydebug","a"); fprintf(fpd, "Creating a dummy cell for interface port\n"); fclose(fpd);
 							AstNode *celltype_for_intf = new AstNode(AST_CELLTYPE);
 							celltype_for_intf->str = interface_type;
 							AstNode *cell_for_intf = new AstNode(AST_CELL, celltype_for_intf);
@@ -1221,6 +1223,7 @@ void AstModule::reprocess_module(RTLIL::Design *design, dict<RTLIL::IdString, RT
 							std::string interface_modport_compare_str = "\\" + interface_modport;
 							AstNode *modport = find_modport(ast_module_of_interface->ast, interface_modport_compare_str); // modport == NULL if no modport
 							// Iterate over all wires in the interface and add them to the module:
+							fpd = fopen("/tmp/mydebug","a"); fprintf(fpd, "Explode interfaces from port %s (%s) in %s\n", name_port.c_str(), interface_modport.c_str(), name.c_str()); fclose(fpd);
 							explode_interface_port(new_ast, intfmodule, name_port, modport);
 						}
 						break;
@@ -1261,6 +1264,7 @@ RTLIL::IdString AstModule::derive(RTLIL::Design *design, dict<RTLIL::IdString, R
 {
 	AstNode *new_ast = NULL;
 	std::string modname = derive_common(design, parameters, &new_ast, mayfail);
+	FILE *fpd;
 
 	// Since interfaces themselves may be instantiated with different parameters,
 	// "modname" must also take those into account, so that unique modules
@@ -1277,7 +1281,9 @@ RTLIL::IdString AstModule::derive(RTLIL::Design *design, dict<RTLIL::IdString, R
 		modname += "$interfaces$" + interf_info;
 
 
+	fpd = fopen("/tmp/mydebug","a"); fprintf(fpd, "derive(full): %s\n" , modname.c_str()); fclose(fpd);
 	if (!design->has(modname)) {
+		fpd = fopen("/tmp/mydebug","a"); fprintf(fpd, "New derive\n"); fclose(fpd);
 		new_ast->str = modname;
 
 		// Iterate over all interfaces which are ports in this module:
@@ -1286,12 +1292,14 @@ RTLIL::IdString AstModule::derive(RTLIL::Design *design, dict<RTLIL::IdString, R
 			std::string intfname = intf.first.str();
 			// Check if a modport applies for the interface port:
 			AstNode *modport = NULL;
+			std::string interface_modport = "";
 			if (modports.count(intfname) > 0) {
-				std::string interface_modport = modports.at(intfname).str();
+				interface_modport = modports.at(intfname).str();
 				AstModule *ast_module_of_interface = (AstModule*)intfmodule;
 				AstNode *ast_node_of_interface = ast_module_of_interface->ast;
 				modport = find_modport(ast_node_of_interface, interface_modport);
 			}
+			fpd = fopen("/tmp/mydebug","a"); fprintf(fpd, "Explode interfaces from port %s (%s) in %s\n", intfname.c_str(), interface_modport.c_str(), modname.c_str()); fclose(fpd);
 			// Iterate over all wires in the interface and add them to the module:
 			explode_interface_port(new_ast, intfmodule, intfname, modport);
 		}
@@ -1308,6 +1316,7 @@ RTLIL::IdString AstModule::derive(RTLIL::Design *design, dict<RTLIL::IdString, R
 				mod->fixup_ports();
 				// We copy the cell of the interface to the sub-module such that it can further be found if it is propagated
 				// down to sub-sub-modules etc.
+				fpd = fopen("/tmp/mydebug","a"); fprintf(fpd, "Copying the cell for %s down to %s\n", intf.first.c_str(), mod->name.c_str()); fclose(fpd);
 				RTLIL::Cell * new_subcell = mod->addCell(intf.first, intf.second->name);
 				new_subcell->set_bool_attribute("\\is_interface");
 			}
@@ -1322,6 +1331,7 @@ RTLIL::IdString AstModule::derive(RTLIL::Design *design, dict<RTLIL::IdString, R
 		}
 
 	} else {
+		fpd = fopen("/tmp/mydebug","a"); fprintf(fpd, "Already has\n"); fclose(fpd);
 		log("Found cached RTLIL representation for module `%s'.\n", modname.c_str());
 	}
 
@@ -1334,12 +1344,16 @@ RTLIL::IdString AstModule::derive(RTLIL::Design *design, dict<RTLIL::IdString, R
 {
 	AstNode *new_ast = NULL;
 	std::string modname = derive_common(design, parameters, &new_ast, mayfail);
+	FILE *fpd;
 
+	fpd = fopen("/tmp/mydebug","a"); fprintf(fpd, "derive(simple): %s\n" , modname.c_str()); fclose(fpd);
 	if (!design->has(modname)) {
+		fpd = fopen("/tmp/mydebug","a"); fprintf(fpd, "New derive\n"); fclose(fpd);
 		new_ast->str = modname;
 		design->add(process_module(new_ast, false));
 		design->module(modname)->check();
 	} else {
+		fpd = fopen("/tmp/mydebug","a"); fprintf(fpd, "Already has\n"); fclose(fpd);
 		log("Found cached RTLIL representation for module `%s'.\n", modname.c_str());
 	}
 

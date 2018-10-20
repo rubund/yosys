@@ -145,6 +145,8 @@ bool expand_module(RTLIL::Design *design, RTLIL::Module *module, bool flag_check
 	bool did_something = false;
 	std::map<RTLIL::Cell*, std::pair<int, int>> array_cells;
 	std::string filename;
+	FILE *fpd;
+	fpd = fopen("/tmp/mydebug","a"); fprintf(fpd, "expand_module: %s\n" , module->name.c_str()); fclose(fpd);
 
 	bool has_interface_ports = false;
 
@@ -385,6 +387,7 @@ bool expand_module(RTLIL::Design *design, RTLIL::Module *module, bool flag_check
 
 	// If any interface instances or interface ports were found in the module, we need to rederive it completely:
 	if ((interfaces_in_module.size() > 0 || has_interface_ports) && !module->get_bool_attribute("\\interfaces_replaced_in_module")) {
+		fpd = fopen("/tmp/mydebug","a"); fprintf(fpd, "reprocessing: %s\n" , module->name.c_str()); fclose(fpd);
 		module->reprocess_module(design, interfaces_in_module);
 		return did_something;
 	}
@@ -759,9 +762,11 @@ struct HierarchyPass : public Pass {
 					mod_it.second->attributes.erase("\\initial_top");
 		}
 
+		FILE *fpd;
 		bool did_something = true;
 		while (did_something)
 		{
+			fpd = fopen("/tmp/mydebug","a"); fprintf(fpd, "hierarchy loop started\n"); fclose(fpd);
 			did_something = false;
 
 			std::set<RTLIL::Module*, IdString::compare_ptr_by_name<Module>> used_modules;
