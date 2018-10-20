@@ -1091,6 +1091,79 @@ AstModule::~AstModule()
 		delete ast;
 }
 
+std::pair<std::string,std::string> AST::split_modport_from_type(std::string name_type)
+{
+	std::string interface_type = "";
+	std::string interface_modport = "";
+	size_t ndots = std::count(name_type.begin(), name_type.end(), '.');
+	// Separate the interface instance name from any modports:
+	if (ndots == 0) { // Does not have modport
+		interface_type = name_type;
+	}
+	else {
+		std::stringstream name_type_stream(name_type);
+		std::string segment;
+		std::vector<std::string> seglist;
+		while(std::getline(name_type_stream, segment, '.')) {
+			seglist.push_back(segment);
+		}
+		if (ndots == 1) { // Has modport
+			interface_type = seglist[0];
+			interface_modport = seglist[1];
+		}
+		else { // Erroneous port type
+			log_error("More than two '.' in signal port type (%s)\n", name_type.c_str());
+		}
+	}
+	return std::pair<std::string,std::string>(interface_type, interface_modport);
+
+}
+
+AstNode * AST::find_modport(AstNode *intf, std::string name)
+{
+	for (auto &ch : intf->children)
+		if (ch->type == AST_MODPORT)
+			if (ch->str == name) // Modport found
+				return ch;
+	return NULL;
+}
+
+void AST::explode_interface_port(AstNode *module_ast, RTLIL::Module * intfmodule, std::string intfname, AstNode *modport)
+{
+	for (auto &wire_it : intfmodule->wires_){
+		AstNode *wire = new AstNode(AST_WIRE, new AstNode(AST_RANGE, AstNode::mkconst_int(wire_it.second->width -1, true), AstNode::mkconst_int(0, true)));
+		std::string origname = log_id(wire_it.first);
+		std::string newname = intfname + "." + origname;
+		wire->str = newname;
+		if (modport != NULL) {
+			bool found_in_modport = false;
+			// Search for the current wire in the wire list for the current modport
+			for (auto &ch : modport->children) {
+				if (ch->type == AST_MODPORTMEMBER) {
+					std::string compare_name = "\\" + origname;
+					if (ch->str == compare_name) { // Found signal. The modport decides whether it is input or output
+						found_in_modport = true;
+						wire->is_input = ch->is_input;
+						wire->is_output = ch->is_output;
+						break;
+					}
+				}
+			}
+			if (found_in_modport) {
+				module_ast->children.push_back(wire);
+			}
+			else { // If not found in modport, do not create port
+				delete wire;
+			}
+		}
+		else { // If no modport, set inout
+			wire->is_input = true;
+			wire->is_output = true;
+			module_ast->children.push_back(wire);
+		}
+	}
+}
+
 // When an interface instance is found in a module, the whole RTLIL for the module will be rederived again
 // from AST. The interface members are copied into the AST module with the prefix of the interface.
 void AstModule::reprocess_module(RTLIL::Design *design, dict<RTLIL::IdString, RTLIL::Module*> local_interfaces)
@@ -1125,27 +1198,9 @@ void AstModule::reprocess_module(RTLIL::Design *design, dict<RTLIL::IdString, RT
 				for(size_t j=0; j<ch2->children.size();j++) {
 					AstNode *ch = ch2->children[j];
 					if(ch->type == AST_INTERFACEPORTTYPE) {
-						std::string name_type = ch->str;
-						size_t ndots = std::count(name_type.begin(), name_type.end(), '.');
-						// Separate the interface instance name from any modports:
-						if (ndots == 0) { // Does not have modport
-							interface_type = name_type;
-						}
-						else {
-							std::stringstream name_type_stream(name_type);
-							std::string segment;
-							std::vector<std::string> seglist;
-							while(std::getline(name_type_stream, segment, '.')) {
-								seglist.push_back(segment);
-							}
-							if (ndots == 1) { // Has modport
-								interface_type = seglist[0];
-								interface_modport = seglist[1];
-							}
-							else { // Erroneous port type
-								log_error("More than two '.' in signal port type (%s)\n", name_type.c_str());
-							}
-						}
+						std::pair<std::string,std::string> res = split_modport_from_type(ch->str);
+						interface_type = res.first;
+						interface_modport = res.second;
 						if (design->modules_.count(interface_type) > 0) {
 							AstNode *celltype_for_intf = new AstNode(AST_CELLTYPE);
 							celltype_for_intf->str = interface_type;
@@ -1156,56 +1211,17 @@ void AstModule::reprocess_module(RTLIL::Design *design, dict<RTLIL::IdString, RT
 							RTLIL::Module *intfmodule = design->modules_[interface_type];
 							AstModule *ast_module_of_interface = (AstModule*)intfmodule;
 							AstNode *ast_node_of_interface = ast_module_of_interface->ast;
-							AstNode *modport = NULL;
 							std::string interface_modport_compare_str = "\\" + interface_modport;
-							for (auto &chm : ast_node_of_interface->children) {
-								if (chm->type == AST_MODPORT) {
-									if (chm->str == interface_modport_compare_str) { // Modport found
-										modport = chm;
-									}
-								}
-							}
+							AstNode *modport = find_modport(ast_node_of_interface, interface_modport_compare_str);
 
 							std::string intfname = name_port;
-							for (auto &wire_it : intfmodule->wires_){
-								AstNode *wire = new AstNode(AST_WIRE, new AstNode(AST_RANGE, AstNode::mkconst_int(wire_it.second->width -1, true), AstNode::mkconst_int(0, true)));
-								std::string origname = log_id(wire_it.first);
-								std::string newname = intfname + "." + origname;
-								wire->str = newname;
-								if (modport != NULL) {
-									bool found_in_modport = false;
-									// Search for the current wire in the wire list for the current modport
-									for (auto &ch : modport->children) {
-										if (ch->type == AST_MODPORTMEMBER) {
-											std::string compare_name = "\\" + origname;
-											if (ch->str == compare_name) { // Found signal. The modport decides whether it is input or output
-												found_in_modport = true;
-												wire->is_input = ch->is_input;
-												wire->is_output = ch->is_output;
-												break;
-											}
-										}
-									}
-									if (found_in_modport) {
-										new_ast->children.push_back(wire);
-									}
-									else { // If not found in modport, do not create port
-										delete wire;
-									}
-								}
-								else { // If no modport, set inout
-									wire->is_input = true;
-									wire->is_output = true;
-									new_ast->children.push_back(wire);
-								}
-							}
+							explode_interface_port(new_ast, intfmodule, intfname, modport);
 						}
 					}
 				}
 			}
 		}
 	}
-
 
 	// The old module will be deleted. Rename and mark for deletion:
 	std::string original_name = this->name.str();
@@ -1267,47 +1283,10 @@ RTLIL::IdString AstModule::derive(RTLIL::Design *design, dict<RTLIL::IdString, R
 				std::string interface_modport = modports.at(intfname).str();
 				AstModule *ast_module_of_interface = (AstModule*)intfmodule;
 				AstNode *ast_node_of_interface = ast_module_of_interface->ast;
-				for (auto &ch : ast_node_of_interface->children) {
-					if (ch->type == AST_MODPORT) {
-						if (ch->str == interface_modport) { // Modport found
-							modport = ch;
-						}
-					}
-				}
+				modport = find_modport(ast_node_of_interface, interface_modport);
 			}
 			// Iterate over all wires in the interface and add them to the module:
-			for (auto &wire_it : intfmodule->wires_){
-				AstNode *wire = new AstNode(AST_WIRE, new AstNode(AST_RANGE, AstNode::mkconst_int(wire_it.second->width -1, true), AstNode::mkconst_int(0, true)));
-				std::string origname = log_id(wire_it.first);
-				std::string newname = intfname + "." + origname;
-				wire->str = newname;
-				if (modport != NULL) {
-					bool found_in_modport = false;
-					// Search for the current wire in the wire list for the current modport
-					for (auto &ch : modport->children) {
-						if (ch->type == AST_MODPORTMEMBER) {
-							std::string compare_name = "\\" + origname;
-							if (ch->str == compare_name) { // Found signal. The modport decides whether it is input or output
-								found_in_modport = true;
-								wire->is_input = ch->is_input;
-								wire->is_output = ch->is_output;
-								break;
-							}
-						}
-					}
-					if (found_in_modport) {
-						new_ast->children.push_back(wire);
-					}
-					else { // If not found in modport, do not create port
-						delete wire;
-					}
-				}
-				else { // If no modport, set inout
-					wire->is_input = true;
-					wire->is_output = true;
-					new_ast->children.push_back(wire);
-				}
-			}
+			explode_interface_port(new_ast, intfmodule, intfname, modport);
 		}
 
 		design->add(process_module(new_ast, false));
