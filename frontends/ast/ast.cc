@@ -1128,6 +1128,42 @@ AstNode * AST::find_modport(AstNode *intf, std::string name)
 	return NULL;
 }
 
+void AST::explode_interface_port(AstNode *module_ast, RTLIL::Module * intfmodule, std::string intfname, AstNode *modport)
+{
+	for (auto &wire_it : intfmodule->wires_){
+		AstNode *wire = new AstNode(AST_WIRE, new AstNode(AST_RANGE, AstNode::mkconst_int(wire_it.second->width -1, true), AstNode::mkconst_int(0, true)));
+		std::string origname = log_id(wire_it.first);
+		std::string newname = intfname + "." + origname;
+		wire->str = newname;
+		if (modport != NULL) {
+			bool found_in_modport = false;
+			// Search for the current wire in the wire list for the current modport
+			for (auto &ch : modport->children) {
+				if (ch->type == AST_MODPORTMEMBER) {
+					std::string compare_name = "\\" + origname;
+					if (ch->str == compare_name) { // Found signal. The modport decides whether it is input or output
+						found_in_modport = true;
+						wire->is_input = ch->is_input;
+						wire->is_output = ch->is_output;
+						break;
+					}
+				}
+			}
+			if (found_in_modport) {
+				module_ast->children.push_back(wire);
+			}
+			else { // If not found in modport, do not create port
+				delete wire;
+			}
+		}
+		else { // If no modport, set inout
+			wire->is_input = true;
+			wire->is_output = true;
+			module_ast->children.push_back(wire);
+		}
+	}
+}
+
 // When an interface instance is found in a module, the whole RTLIL for the module will be rederived again
 // from AST. The interface members are copied into the AST module with the prefix of the interface.
 void AstModule::reprocess_module(RTLIL::Design *design, dict<RTLIL::IdString, RTLIL::Module*> local_interfaces)
@@ -1179,45 +1215,13 @@ void AstModule::reprocess_module(RTLIL::Design *design, dict<RTLIL::IdString, RT
 							AstNode *modport = find_modport(ast_node_of_interface, interface_modport_compare_str);
 
 							std::string intfname = name_port;
-							for (auto &wire_it : intfmodule->wires_){
-								AstNode *wire = new AstNode(AST_WIRE, new AstNode(AST_RANGE, AstNode::mkconst_int(wire_it.second->width -1, true), AstNode::mkconst_int(0, true)));
-								std::string origname = log_id(wire_it.first);
-								std::string newname = intfname + "." + origname;
-								wire->str = newname;
-								if (modport != NULL) {
-									bool found_in_modport = false;
-									// Search for the current wire in the wire list for the current modport
-									for (auto &ch : modport->children) {
-										if (ch->type == AST_MODPORTMEMBER) {
-											std::string compare_name = "\\" + origname;
-											if (ch->str == compare_name) { // Found signal. The modport decides whether it is input or output
-												found_in_modport = true;
-												wire->is_input = ch->is_input;
-												wire->is_output = ch->is_output;
-												break;
-											}
-										}
-									}
-									if (found_in_modport) {
-										new_ast->children.push_back(wire);
-									}
-									else { // If not found in modport, do not create port
-										delete wire;
-									}
-								}
-								else { // If no modport, set inout
-									wire->is_input = true;
-									wire->is_output = true;
-									new_ast->children.push_back(wire);
-								}
-							}
+							explode_interface_port(new_ast, intfmodule, intfname, modport);
 						}
 					}
 				}
 			}
 		}
 	}
-
 
 	// The old module will be deleted. Rename and mark for deletion:
 	std::string original_name = this->name.str();
