@@ -1091,6 +1091,10 @@ AstModule::~AstModule()
 		delete ast;
 }
 
+
+// An interface port with modport is specified like this:
+//    <interface_name>.<modport_name>
+// This function splits them, and fails if not valid combination.
 std::pair<std::string,std::string> AST::split_modport_from_type(std::string name_type)
 {
 	std::string interface_type = "";
@@ -1128,6 +1132,7 @@ AstNode * AST::find_modport(AstNode *intf, std::string name)
 	return NULL;
 }
 
+// Iterate over all wires in an interface and add them them as wires in an AST module:
 void AST::explode_interface_port(AstNode *module_ast, RTLIL::Module * intfmodule, std::string intfname, AstNode *modport)
 {
 	for (auto &wire_it : intfmodule->wires_){
@@ -1192,31 +1197,35 @@ void AstModule::reprocess_module(RTLIL::Design *design, dict<RTLIL::IdString, RT
 		AstNode *ch2 = new_ast->children[i];
 		std::string interface_type = "";
 		std::string interface_modport = "";
-		if (ch2->type == AST_INTERFACEPORT) {
-			std::string name_port = ch2->str;
+		if (ch2->type == AST_INTERFACEPORT) { // Is an interface port
+			std::string name_port = ch2->str; // Name of the interface port
 			if (ch2->children.size() > 0) {
 				for(size_t j=0; j<ch2->children.size();j++) {
 					AstNode *ch = ch2->children[j];
-					if(ch->type == AST_INTERFACEPORTTYPE) {
+					if(ch->type == AST_INTERFACEPORTTYPE) { // Found the AST node containing the type of the interface
 						std::pair<std::string,std::string> res = split_modport_from_type(ch->str);
 						interface_type = res.first;
-						interface_modport = res.second;
+						interface_modport = res.second; // Is "", if no modport
 						if (design->modules_.count(interface_type) > 0) {
+							// Add a cell to the module corresponding to the interface port such that
+							// it can further propagated down if needed:
 							AstNode *celltype_for_intf = new AstNode(AST_CELLTYPE);
 							celltype_for_intf->str = interface_type;
 							AstNode *cell_for_intf = new AstNode(AST_CELL, celltype_for_intf);
 							cell_for_intf->str = name_port + "_inst_from_top_dummy";
 							new_ast->children.push_back(cell_for_intf);
 
-							RTLIL::Module *intfmodule = design->modules_[interface_type];
+							// Get all members of this non-overridden dummy interface instance:
+							RTLIL::Module *intfmodule = design->modules_[interface_type]; // All interfaces should at this point in time (assuming
+							                                                              // reprocess_module is called from the hierarchy pass) be
+							                                                              // present in design->modules_
 							AstModule *ast_module_of_interface = (AstModule*)intfmodule;
-							AstNode *ast_node_of_interface = ast_module_of_interface->ast;
 							std::string interface_modport_compare_str = "\\" + interface_modport;
-							AstNode *modport = find_modport(ast_node_of_interface, interface_modport_compare_str);
-
-							std::string intfname = name_port;
-							explode_interface_port(new_ast, intfmodule, intfname, modport);
+							AstNode *modport = find_modport(ast_module_of_interface->ast, interface_modport_compare_str); // modport == NULL if no modport
+							// Iterate over all wires in the interface and add them to the module:
+							explode_interface_port(new_ast, intfmodule, name_port, modport);
 						}
+						break;
 					}
 				}
 			}
