@@ -1119,6 +1119,15 @@ std::pair<std::string,std::string> AST::split_modport_from_type(std::string name
 
 }
 
+AstNode * AST::find_modport(AstNode *intf, std::string name)
+{
+	for (auto &ch : intf->children)
+		if (ch->type == AST_MODPORT)
+			if (ch->str == name) // Modport found
+				return ch;
+	return NULL;
+}
+
 // When an interface instance is found in a module, the whole RTLIL for the module will be rederived again
 // from AST. The interface members are copied into the AST module with the prefix of the interface.
 void AstModule::reprocess_module(RTLIL::Design *design, dict<RTLIL::IdString, RTLIL::Module*> local_interfaces)
@@ -1166,15 +1175,8 @@ void AstModule::reprocess_module(RTLIL::Design *design, dict<RTLIL::IdString, RT
 							RTLIL::Module *intfmodule = design->modules_[interface_type];
 							AstModule *ast_module_of_interface = (AstModule*)intfmodule;
 							AstNode *ast_node_of_interface = ast_module_of_interface->ast;
-							AstNode *modport = NULL;
 							std::string interface_modport_compare_str = "\\" + interface_modport;
-							for (auto &chm : ast_node_of_interface->children) {
-								if (chm->type == AST_MODPORT) {
-									if (chm->str == interface_modport_compare_str) { // Modport found
-										modport = chm;
-									}
-								}
-							}
+							AstNode *modport = find_modport(ast_node_of_interface, interface_modport_compare_str);
 
 							std::string intfname = name_port;
 							for (auto &wire_it : intfmodule->wires_){
@@ -1277,13 +1279,7 @@ RTLIL::IdString AstModule::derive(RTLIL::Design *design, dict<RTLIL::IdString, R
 				std::string interface_modport = modports.at(intfname).str();
 				AstModule *ast_module_of_interface = (AstModule*)intfmodule;
 				AstNode *ast_node_of_interface = ast_module_of_interface->ast;
-				for (auto &ch : ast_node_of_interface->children) {
-					if (ch->type == AST_MODPORT) {
-						if (ch->str == interface_modport) { // Modport found
-							modport = ch;
-						}
-					}
-				}
+				modport = find_modport(ast_node_of_interface, interface_modport);
 			}
 			// Iterate over all wires in the interface and add them to the module:
 			for (auto &wire_it : intfmodule->wires_){
