@@ -256,7 +256,7 @@ bool expand_module(RTLIL::Design *design, RTLIL::Module *module, bool flag_check
 					bool not_found_interface = false;
 					if(module->get_bool_attribute("\\interfaces_replaced_in_module")) { // If 'interfaces' in the cell have not be been handled yet, there is no need to derive the sub-module either
 						int nexactmatch = interfaces_in_module.count(interface_name) > 0;
-						std::string interface_name_str2 =  interface_name_str + "_inst_from_top";
+						std::string interface_name_str2 =  interface_name_str + "_inst_from_top_dummy";
 						RTLIL::IdString interface_name2 = interface_name_str2;
 						int nmatch2 = interfaces_in_module.count(interface_name2) > 0;
 						if (nexactmatch > 0 || nmatch2 > 0) { // Check if the interface instance is present in module
@@ -380,7 +380,7 @@ bool expand_module(RTLIL::Design *design, RTLIL::Module *module, bool flag_check
 	module->attributes.erase("\\cells_not_processed");
 
 
-	// If any interface instances were found in the module, we need to rederive it completely:
+	// If any interface instances or interface ports were found in the module, we need to rederive it completely:
 	if ((interfaces_in_module.size() > 0 || has_interface_ports) && !module->get_bool_attribute("\\interfaces_replaced_in_module")) {
 		module->reprocess_module(design, interfaces_in_module);
 		return did_something;
@@ -456,6 +456,8 @@ void hierarchy_clean(RTLIL::Design *design, RTLIL::Module *top, bool purge_lib)
 		if (used.count(it.second) == 0)
 			del_modules.push_back(it.second);
 		else {
+			// Now all interface ports must have been exploded, and it is hence
+			// safe to delete all of the remaining dummy interface ports:
 			pool<RTLIL::Wire*> del_wires;
 			for(auto &wire : it.second->wires_) {
 				if ((wire.second->port_input || wire.second->port_output) && wire.second->get_bool_attribute("\\is_interface")) {

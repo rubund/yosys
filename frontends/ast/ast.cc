@@ -1150,7 +1150,7 @@ void AstModule::reprocess_module(RTLIL::Design *design, dict<RTLIL::IdString, RT
 							AstNode *celltype_for_intf = new AstNode(AST_CELLTYPE);
 							celltype_for_intf->str = interface_type;
 							AstNode *cell_for_intf = new AstNode(AST_CELL, celltype_for_intf);
-							cell_for_intf->str = name_port + "_inst_from_top";
+							cell_for_intf->str = name_port + "_inst_from_top_dummy";
 							new_ast->children.push_back(cell_for_intf);
 
 							RTLIL::Module *intfmodule = design->modules_[interface_type];
