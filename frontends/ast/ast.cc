@@ -1091,6 +1091,34 @@ AstModule::~AstModule()
 		delete ast;
 }
 
+std::pair<std::string,std::string> AST::split_modport_from_type(std::string name_type)
+{
+	std::string interface_type = "";
+	std::string interface_modport = "";
+	size_t ndots = std::count(name_type.begin(), name_type.end(), '.');
+	// Separate the interface instance name from any modports:
+	if (ndots == 0) { // Does not have modport
+		interface_type = name_type;
+	}
+	else {
+		std::stringstream name_type_stream(name_type);
+		std::string segment;
+		std::vector<std::string> seglist;
+		while(std::getline(name_type_stream, segment, '.')) {
+			seglist.push_back(segment);
+		}
+		if (ndots == 1) { // Has modport
+			interface_type = seglist[0];
+			interface_modport = seglist[1];
+		}
+		else { // Erroneous port type
+			log_error("More than two '.' in signal port type (%s)\n", name_type.c_str());
+		}
+	}
+	return std::pair<std::string,std::string>(interface_type, interface_modport);
+
+}
+
 // When an interface instance is found in a module, the whole RTLIL for the module will be rederived again
 // from AST. The interface members are copied into the AST module with the prefix of the interface.
 void AstModule::reprocess_module(RTLIL::Design *design, dict<RTLIL::IdString, RTLIL::Module*> local_interfaces)
@@ -1125,27 +1153,9 @@ void AstModule::reprocess_module(RTLIL::Design *design, dict<RTLIL::IdString, RT
 				for(size_t j=0; j<ch2->children.size();j++) {
 					AstNode *ch = ch2->children[j];
 					if(ch->type == AST_INTERFACEPORTTYPE) {
-						std::string name_type = ch->str;
-						size_t ndots = std::count(name_type.begin(), name_type.end(), '.');
-						// Separate the interface instance name from any modports:
-						if (ndots == 0) { // Does not have modport
-							interface_type = name_type;
-						}
-						else {
-							std::stringstream name_type_stream(name_type);
-							std::string segment;
-							std::vector<std::string> seglist;
-							while(std::getline(name_type_stream, segment, '.')) {
-								seglist.push_back(segment);
-							}
-							if (ndots == 1) { // Has modport
-								interface_type = seglist[0];
-								interface_modport = seglist[1];
-							}
-							else { // Erroneous port type
-								log_error("More than two '.' in signal port type (%s)\n", name_type.c_str());
-							}
-						}
+						std::pair<std::string,std::string> res = split_modport_from_type(ch->str);
+						interface_type = res.first;
+						interface_modport = res.second;
 						if (design->modules_.count(interface_type) > 0) {
 							AstNode *celltype_for_intf = new AstNode(AST_CELLTYPE);
 							celltype_for_intf->str = interface_type;
