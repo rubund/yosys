@@ -1111,10 +1111,12 @@ void AstModule::reprocess_module(RTLIL::Design *design, dict<RTLIL::IdString, RT
 
 	AstNode *ast_before_replacing_interface_ports = new_ast->clone();
 
+	// Explode all interface ports. Note this will only have any effect on top
+	// level modules. Other sub-modules will have their interface ports
+	// exploded in derive(..)
 	for (size_t i =0; i<new_ast->children.size(); i++)
 	{
 		AstNode *ch2 = new_ast->children[i];
-		bool delete_current = false;
 		std::string interface_type = "";
 		std::string interface_modport = "";
 		if (ch2->type == AST_INTERFACEPORT) {
@@ -1123,7 +1125,6 @@ void AstModule::reprocess_module(RTLIL::Design *design, dict<RTLIL::IdString, RT
 				for(size_t j=0; j<ch2->children.size();j++) {
 					AstNode *ch = ch2->children[j];
 					if(ch->type == AST_INTERFACEPORTTYPE) {
-						//std::cout << "Child: " << ch->str << std::endl;
 						std::string name_type = ch->str;
 						size_t ndots = std::count(name_type.begin(), name_type.end(), '.');
 						// Separate the interface instance name from any modports:
@@ -1145,10 +1146,6 @@ void AstModule::reprocess_module(RTLIL::Design *design, dict<RTLIL::IdString, RT
 								log_error("More than two '.' in signal port type (%s)\n", name_type.c_str());
 							}
 						}
-						for (auto mod : design->modules()) {
-							std::cout << "module: " << mod->name.str() << std::endl;
-						}
-						std::cout << "to delete: " << name_type << std::endl;
 						if (design->modules_.count(interface_type) > 0) {
 							AstNode *celltype_for_intf = new AstNode(AST_CELLTYPE);
 							celltype_for_intf->str = interface_type;
@@ -1157,9 +1154,6 @@ void AstModule::reprocess_module(RTLIL::Design *design, dict<RTLIL::IdString, RT
 							new_ast->children.push_back(cell_for_intf);
 
 							RTLIL::Module *intfmodule = design->modules_[interface_type];
-							delete_current = false;
-							if(delete_current)
-								new_ast->children.erase(new_ast->children.begin()+i);
 							AstModule *ast_module_of_interface = (AstModule*)intfmodule;
 							AstNode *ast_node_of_interface = ast_module_of_interface->ast;
 							AstNode *modport = NULL;
@@ -1209,9 +1203,6 @@ void AstModule::reprocess_module(RTLIL::Design *design, dict<RTLIL::IdString, RT
 					}
 				}
 			}
-		}
-		if (delete_current) {
-			i--;
 		}
 	}
 
