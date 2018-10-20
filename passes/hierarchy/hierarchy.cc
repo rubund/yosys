@@ -458,7 +458,7 @@ void hierarchy_clean(RTLIL::Design *design, RTLIL::Module *top, bool purge_lib)
 		else {
 			pool<RTLIL::Wire*> del_wires;
 			for(auto &wire : it.second->wires_) {
-				if (wire.second->get_bool_attribute("\\is_interface")) {
+				if ((wire.second->port_input || wire.second->port_output) && wire.second->get_bool_attribute("\\is_interface")) {
 					del_wires.insert(wire.second);
 				}
 			}
